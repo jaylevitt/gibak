@@ -1,21 +1,19 @@
-# OCAMLFLAGS    +=
+BYTE_ENABLED = true
+
+OCAMLFLAGS += -dtypes
 # OCAMLCFLAGS   +=
 # OCAMLOPTFLAGS +=
 # OCAML_LINK_FLAGS +=
 # OCAML_BYTE_LINK_FLAGS +=
 # OCAML_NATIVE_LINK_FLAGS +=
 
-FILES[] =
-   folddir
-   ometastore
-   util
-
 StaticCLibrary(ometastore_stub, ometastore_stub)
 
 PROGRAM = ometastore
 OCAML_CLIBS += ometastore_stub
-#OCAML_CLIBS += ometastore_stub
 OCAML_OTHER_LIBS += unix str
-# OCAML_LIB_FLAGS +=
 
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+OCamlProgram(ometastore, folddir util ometastore)
+OCamlProgram(find-repositories, folddir util find-repositories)
+
+.DEFAULT: ometastore find-repositories
