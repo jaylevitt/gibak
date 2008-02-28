@@ -25,15 +25,8 @@ type whatsnew = Added of entry | Deleted of entry | Diff of entry * entry
 
 external utime : string -> int -> unit = "perform_utime"
 
-let user_name uid = (getpwuid uid).pw_name
-let group_name gid = (getgrgid gid).gr_name
-
-let memoized f =
-  let t = Hashtbl.create 13 in fun x ->
-    try Hashtbl.find t x with Not_found -> let y = f x in Hashtbl.add t x y; y
-
-let user_name = memoized user_name
-let group_name = memoized group_name
+let user_name = memoized (fun uid -> (getpwuid uid).pw_name)
+let group_name = memoized (fun gid -> (getgrgid gid).gr_name)
 
 let int_of_file_kind = function
     S_REG -> 0 | S_DIR -> 1 | S_CHR -> 2 | S_BLK -> 3 | S_LNK -> 4 | S_FIFO -> 5
