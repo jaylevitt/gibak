@@ -7,7 +7,7 @@ let debug = ref false
 let verbose = ref false
 let use_mtime = ref false
 let magic = "Ometastore"
-let version = "00000"
+let version = "1.0.0"
 
 type xattr = { name : string; value : string }
 
@@ -73,10 +73,21 @@ let read_xstring is =
     really_input is s 0 len;
     s
 
+let common_prefix_chars s1 s2 =
+  let rec loop s1 s2 i max =
+    if s1.[i] = s2.[i] then
+      if i < max then loop s1 s2 (i+1) max else i + 1
+    else i
+  in
+    if String.length s1 = 0 || String.length s2 = 0 then 0
+    else loop s1 s2 0 (min (String.length s1 - 1) (String.length s2 -1))
+
 let dump_entries ?(verbose=false) l fname =
-  let dump_entry os e =
+  let dump_entry os prev e =
     if verbose then print_endline e.path;
-    write_xstring os e.path;
+    let pref = common_prefix_chars prev e.path in
+    write_int os 2 pref;
+    write_xstring os (String.sub e.path pref (String.length e.path - pref));
     write_xstring os e.owner;
     write_xstring os e.group;
     write_xstring os (string_of_float e.mtime);
@@ -85,16 +96,18 @@ let dump_entries ?(verbose=false) l fname =
     write_int os 2 (List.length e.xattrs);
     List.iter
       (fun t -> write_xstring os t.name; write_xstring os t.value)
-      e.xattrs
+      e.xattrs;
+    e.path
   in do_finally (open_out_bin fname) close_out begin fun os ->
     output_string os (magic ^ "\n");
     output_string os (version ^ "\n");
-    List.iter (dump_entry os) l
+    ignore (List.fold_left (dump_entry os) "" l)
   end
 
 let read_entries fname =
-  let read_entry is =
-    let path = read_xstring is in
+  let read_entry is prev =
+    let pref = read_int is 2 in
+    let path = String.sub prev 0 pref ^ read_xstring is in
     let owner = read_xstring is in
     let group = read_xstring is in
     let mtime = float_of_string (read_xstring is) in
@@ -113,9 +126,12 @@ let read_entries fname =
     if magic <> input_line is then failwith "Invalid file: bad magic";
     let _ = input_line is (* version *) in
     let entries = ref [] in
+    let prev = ref "" in
       try
         while true do
-          entries := read_entry is :: !entries
+          let e = read_entry is !prev in
+            entries := e :: !entries;
+            prev := e.path
         done;
         assert false
       with End_of_file -> !entries
