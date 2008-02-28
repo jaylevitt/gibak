@@ -1,8 +1,6 @@
 open Util
 open Unix
 
-exception Prune
-
 module type IGNORE =
 sig
   type t
@@ -13,10 +11,12 @@ end
 
 let join a b = if a <> "" && b <> "" then a ^ "/" ^ b else a ^ b
 
+type 'a fold_acc = Continue of 'a | Prune of 'a
+
 module type S =
 sig
   type ignore_info
-  val fold_directory : ?verbose:bool -> ('a -> string -> 'a) -> 'a -> string ->
+  val fold_directory : ?verbose:bool -> ('a -> string -> 'a fold_acc) -> 'a -> string ->
                        ?ign_info:ignore_info -> string -> 'a
 end
 
@@ -36,13 +36,13 @@ struct
                  match readdir d with
                      "." | ".." | ".git" -> ()
                      | n when M.is_ignored ~verbose ign_info n -> ()
-                     | n ->
-                         try
-                           let n = join path n in
-                             acc := f !acc n;
-                             if (stat (join base n)).st_kind = S_DIR then
-                               acc := fold_directory f ~ign_info !acc base n
-                         with Prune -> ()
+                     | n -> let n = join path n in
+                         match f !acc n with
+                           | Continue x ->
+                               acc := x;
+                               if (lstat (join base n)).st_kind = S_DIR then
+                                 acc := fold_directory f ~ign_info !acc base n
+                           | Prune x -> acc := x
                done;
                assert false
              with End_of_file -> ());
