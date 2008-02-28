@@ -52,9 +52,9 @@ let entry_of_path path =
 
 module Entries(F : Folddir.S) =
 struct
-  let get_entries path =
+  let get_entries ?(verbose=false) path =
     let aux l name = { (entry_of_path (join path name)) with path = name } :: l
-    in List.sort compare (F.fold_directory aux [] path "")
+    in List.sort compare (F.fold_directory ~verbose aux [] path "")
 end
 
 let write_int os bytes n =
@@ -200,96 +200,21 @@ let apply_changes path l =
                                    { e2 with path = join path e2.path}))
        l)
 
-module Allentries = Entries(Folddir.Make(struct
-                                           type t = unit
-                                           let init _ = ()
-                                           let update () _ = ()
-                                           let is_ignored () _ = false
-                                         end))
-
-module Gitignore =
-struct
-  type glob_type = Accept | Deny
-  type glob = glob_type * string
-  type t = { base : string; levels : (string * glob list) list }
-
-  external fnmatch : bool -> string -> string -> bool = "perform_fnmatch"
-
-  let glob_of_string s = match s.[0] with
-      '!' -> (Accept, String.sub s 1 (String.length s - 1))
-    | _ -> (Deny, s)
-
-  let collect_globs l =
-    let rec aux acc = function
-        [] -> acc
-      | line::tl ->
-          if line = "" || line.[0] = '#' then aux acc tl
-          else aux (glob_of_string line :: acc) tl
-    in aux [] l
-
-  let read_gitignore path =
-    try
-      collect_globs
-        (do_finally (open_in (join path ".gitignore")) close_in
-           (fun is ->
-              let l = ref [] in
-                try
-                  while true do
-                    l := input_line is :: !l
-                  done;
-                  assert false
-                with End_of_file -> !l) )
-    with Sys_error _ -> []
-
-  let init path = { base = path; levels = [] }
-
-  let update t subdir =
-    let base = join t.base subdir in
-    let globs = read_gitignore base in
-      { base = base; levels = (subdir, globs) :: t.levels }
-
-  let glob_matches glob name =
-    if String.contains glob '/' then
-      fnmatch true glob name
-    else
-      fnmatch false glob (Filename.basename name)
-
-  let is_ignored t fname =
-    let rec aux fname = function
-      | [] -> false
-      | (dname, globs)::tl ->
-        let ign = List.fold_left
-          (fun s (ty, glob) ->
-            if glob_matches glob fname then
-              (match ty with
-                  Accept ->
-                    if !debug then printf "ACCEPT %S (matched %S)\n" fname glob;
-                    Some false
-                | Deny ->
-                    if !debug then printf "DENY %S (matched %S)\n" fname glob;
-                    Some true)
-            else s)
-          None globs
-        in match ign with
-             Some b -> b
-           | None -> aux (join dname fname) tl
-    in aux fname t.levels
-end
-
-module Gitignored = Entries(Folddir.Make(Gitignore))
+module Allentries = Entries(Folddir.Make(Folddir.Ignore_none))
+module Gitignored = Entries(Folddir.Make(Folddir.Gitignore))
 
 let main () =
   let usage = "Usage: ometastore <options>" in
   let mode = ref `Unset in
   let file = ref ".ometastore" in
   let path = ref "." in
-  let entries = ref Allentries.get_entries in
+  let get_entries = ref Allentries.get_entries in
   let specs = [
        "-c", Arg.Unit (fun () -> mode := `Compare),
        "Show differences between stored and real metadata";
        "-s", Arg.Unit (fun () -> mode := `Save), "Save metadata";
        "-a", Arg.Unit (fun () -> mode := `Apply), "Apply current metadata";
-       "-i", Arg.Unit (fun () -> entries := Gitignored.get_entries),
+       "-i", Arg.Unit (fun () -> get_entries := Gitignored.get_entries),
        "Honor .gitignore specifications";
        "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
        "-v", Arg.Set verbose, "Verbose mode";
@@ -298,10 +223,10 @@ let main () =
   in Arg.parse specs ignore usage;
      match !mode with
        | `Unset -> Arg.usage specs usage
-       | `Save -> dump_entries ~verbose:!verbose (!entries !path) !file
+       | `Save -> dump_entries ~verbose:!verbose (!get_entries !path) !file
        | `Compare | `Apply as mode ->
            let stored = read_entries !file in
-           let actual = !entries !path in
+           let actual = !get_entries ~verbose:!debug !path in
              match mode with
                  `Compare -> print_changes (compare_entries stored actual)
                | `Apply -> apply_changes !path (compare_entries actual stored)
