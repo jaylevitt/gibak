@@ -1,0 +1,19 @@
+# OCAMLFLAGS    +=
+# OCAMLCFLAGS   +=
+# OCAMLOPTFLAGS +=
+# OCAML_LINK_FLAGS +=
+# OCAML_BYTE_LINK_FLAGS +=
+# OCAML_NATIVE_LINK_FLAGS +=
+
+FILES[] =
+   ometastore
+
+StaticCLibrary(ometastore_stub, ometastore_stub)
+
+PROGRAM = ometastore
+OCAML_CLIBS += ometastore_stub
+#OCAML_CLIBS += ometastore_stub
+OCAML_OTHER_LIBS += unix str
+# OCAML_LIB_FLAGS +=
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

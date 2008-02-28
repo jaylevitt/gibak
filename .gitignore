@@ -1,0 +1,10 @@
+_build
+.omake*
+.ometa*
+*.swp
+*.[ao]
+*.omc
+*.cm[aiox]
+*.cmxa
+*.opt
+ometastore
