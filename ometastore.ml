@@ -1,5 +1,7 @@
 open Printf
 open Unix
+open Folddir
+open Util
 
 let debug = ref false
 let verbose = ref false
@@ -48,42 +50,11 @@ let entry_of_path path =
     { path = path; owner = user; group = group; mode = s.st_perm;
       kind = s.st_kind; mtime = s.st_mtime; xattrs = [] }
 
-let do_finally x final f = try f x with e -> (try final x with _ -> ()); raise e
-
-let join a b = if a <> "" && b <> "" then a ^ "/" ^ b else a ^ b
-
-module Entries(M : sig
-                 type t
-                 val init : string -> t
-                 val update : t -> string -> t
-                 val is_ignored : t -> string -> bool
-               end) =
+module Entries(F : Folddir.S) =
 struct
-  let rec fold_directory f ign acc base path =
-    let acc = ref acc in
-    let ign = M.update ign path in
-    let dir = join base path in
-      try
-        do_finally (opendir dir) closedir
-          (fun d ->
-             try
-               while true do
-                 match readdir d with
-                     "." | ".." | ".git" -> ()
-                     | n when M.is_ignored ign n -> ()
-                     | n -> let n = join path n in
-                         acc := f !acc n;
-                         if (stat (join base n)).st_kind = S_DIR then
-                           acc := fold_directory f ign !acc base n
-               done;
-               assert false
-             with End_of_file -> ());
-        !acc
-      with Unix.Unix_error _ -> !acc
-
   let get_entries path =
     let aux l name = { (entry_of_path (join path name)) with path = name } :: l
-    in List.sort compare (fold_directory aux (M.init path) [] path "")
+    in List.sort compare (F.fold_directory aux [] path "")
 end
 
 let write_int os bytes n =
@@ -229,12 +200,12 @@ let apply_changes path l =
                                    { e2 with path = join path e2.path}))
        l)
 
-module Allentries = Entries(struct
-                              type t = unit
-                              let init _ = ()
-                              let update () _ = ()
-                              let is_ignored () _ = false
-                            end)
+module Allentries = Entries(Folddir.Make(struct
+                                           type t = unit
+                                           let init _ = ()
+                                           let update () _ = ()
+                                           let is_ignored () _ = false
+                                         end))
 
 module Gitignore =
 struct
@@ -305,7 +276,7 @@ struct
     in aux fname t.levels
 end
 
-module Gitignored = Entries(Gitignore)
+module Gitignored = Entries(Folddir.Make(Gitignore))
 
 let main () =
   let usage = "Usage: ometastore <options>" in

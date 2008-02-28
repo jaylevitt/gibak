@@ -6,7 +6,9 @@
 # OCAML_NATIVE_LINK_FLAGS +=
 
 FILES[] =
+   folddir
    ometastore
+   util
 
 StaticCLibrary(ometastore_stub, ometastore_stub)
 
