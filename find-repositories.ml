@@ -23,16 +23,19 @@ module All = Findrepos(Folddir.Make(Folddir.Ignore_none))
 module Gitignored = Findrepos(Folddir.Make(Folddir.Gitignore))
 
 let main () =
-  let usage = "Usage: ometastore <options>" in
+  let usage = "Usage: find-repositories <options>" in
   let path = ref "." in
   let find_repos = ref All.find_repositories in
+  let zerosep = ref false in
   let specs = [
        "--path", Arg.Set_string path, "Set base path (default: .)";
        "-i", Arg.Unit (fun () -> find_repos := Gitignored.find_repositories),
        "Honor .gitignore specifications";
+       "-z", Arg.Set zerosep, "Use \\0 to separate filenames.";
        "--debug", Arg.Set debug, "Debug mode"
      ]
   in Arg.parse specs ignore usage;
-     List.iter print_endline (!find_repos ~debug:!debug !path)
+     let print = if !zerosep then printf "%s\000" else print_endline in
+       List.iter print (!find_repos ~debug:!debug !path)
 
 let () = main ()
