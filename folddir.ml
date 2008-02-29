@@ -121,15 +121,16 @@ struct
                   Accept ->
                     if debug then
                       eprintf "ACCEPT %S (matched %S) at %S\n" fname glob t.base;
-                    Some false
+                    `Kept
                 | Deny ->
                     if debug then
                       eprintf "DENY %S (matched %S) at %S\n" fname glob t.base;
-                    Some true)
+                    `Ignored)
             else s)
-          None globs
+          `Dontknow globs
         in match ign with
-             Some b -> b
-           | None -> aux (join dname fname) tl
+          | `Dontknow -> aux (join dname fname) tl
+          | `Ignored -> true
+          | `Kept -> false
     in fname = ".git" || aux fname t.levels
 end
