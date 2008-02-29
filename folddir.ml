@@ -44,7 +44,8 @@ struct
                              | Continue x ->
                                  acc := x;
                                  if stat.st_kind = S_DIR then
-                                   acc := fold_directory f ~ign_info !acc base n
+                                   acc := fold_directory ~debug f ~ign_info
+                                            !acc base n
                              | Prune x -> acc := x
                done;
                assert false
@@ -118,10 +119,12 @@ struct
             if glob_matches glob fname then
               (match ty with
                   Accept ->
-                    if debug then eprintf "ACCEPT %S (matched %S)\n" fname glob;
+                    if debug then
+                      eprintf "ACCEPT %S (matched %S) at %S\n" fname glob t.base;
                     Some false
                 | Deny ->
-                    if debug then eprintf "DENY %S (matched %S)\n" fname glob;
+                    if debug then
+                      eprintf "DENY %S (matched %S) at %S\n" fname glob t.base;
                     Some true)
             else s)
           None globs
