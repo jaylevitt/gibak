@@ -13,7 +13,7 @@ struct
         match stat.st_kind with
           | S_DIR -> begin
               try access (join dir ".git") [F_OK]; Prune l
-              with Unix_error _ -> Continue l
+              with Unix_error _ -> Continue (name :: l)
             end
           | _ -> Continue (name :: l)
     in List.rev (F.fold_directory ~debug aux [] path "")
