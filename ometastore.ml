@@ -48,7 +48,7 @@ struct
   let get_entries ?(verbose=false) path =
     let aux l name stat =
       Continue ({ (entry_of_path (join path name)) with path = name } :: l)
-    in List.sort compare (F.fold_directory ~verbose aux [] path "")
+    in List.rev (F.fold_directory ~verbose aux [] path "")
 end
 
 let write_int os bytes n =
@@ -154,7 +154,7 @@ let compare_entries l1 l2 =
     List.fold_left
       (fun dels e1 -> if M.mem e1.path m2 then dels else Deleted e1 :: dels)
       [] l1
-  in List.sort compare (List.rev_append deletions changes)
+  in List.rev (List.rev_append deletions changes)
 
 let print_changes =
   List.iter
