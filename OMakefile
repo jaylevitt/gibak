@@ -15,5 +15,6 @@ OCAML_OTHER_LIBS += unix str
 
 OCamlProgram(ometastore, folddir util ometastore)
 OCamlProgram(find-repositories, folddir util find-repositories)
+OCamlProgram(find-gitfiles, folddir util find-gitfiles)
 
-.DEFAULT: ometastore find-repositories
+.DEFAULT: ometastore find-repositories find-gitfiles
