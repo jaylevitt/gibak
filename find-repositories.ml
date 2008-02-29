@@ -8,10 +8,9 @@ let debug = ref false
 module Findrepos(F : Folddir.S) =
 struct
   let find_repositories ?(verbose=false) path =
-    let aux l name =
+    let aux l name stat =
       let dir = join path name in
-      let s = lstat dir in
-        match s.st_kind with
+        match stat.st_kind with
           | S_DIR -> begin
               try access (join dir ".git") [F_OK]; Prune (name :: l)
               with Unix_error _ -> Continue l

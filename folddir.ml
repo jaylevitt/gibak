@@ -16,8 +16,9 @@ type 'a fold_acc = Continue of 'a | Prune of 'a
 module type S =
 sig
   type ignore_info
-  val fold_directory : ?verbose:bool -> ('a -> string -> 'a fold_acc) -> 'a -> string ->
-                       ?ign_info:ignore_info -> string -> 'a
+  val fold_directory :
+    ?verbose:bool -> ('a -> string -> Unix.stats -> 'a fold_acc) -> 'a ->
+    string -> ?ign_info:ignore_info -> string -> 'a
 end
 
 module Make(M : IGNORE) : S with type ignore_info = M.t =
@@ -36,13 +37,15 @@ struct
                  match readdir d with
                      "." | ".." | ".git" -> ()
                      | n when M.is_ignored ~verbose ign_info n -> ()
-                     | n -> let n = join path n in
-                         match f !acc n with
-                           | Continue x ->
-                               acc := x;
-                               if (lstat (join base n)).st_kind = S_DIR then
-                                 acc := fold_directory f ~ign_info !acc base n
-                           | Prune x -> acc := x
+                     | n ->
+                         let n = join path n in
+                         let stat = lstat (join base n) in
+                           match f !acc n stat with
+                             | Continue x ->
+                                 acc := x;
+                                 if stat.st_kind = S_DIR then
+                                   acc := fold_directory f ~ign_info !acc base n
+                             | Prune x -> acc := x
                done;
                assert false
              with End_of_file -> ());

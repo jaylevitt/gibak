@@ -46,7 +46,7 @@ let entry_of_path path =
 module Entries(F : Folddir.S) =
 struct
   let get_entries ?(verbose=false) path =
-    let aux l name =
+    let aux l name stat =
       Continue ({ (entry_of_path (join path name)) with path = name } :: l)
     in List.sort compare (F.fold_directory ~verbose aux [] path "")
 end
