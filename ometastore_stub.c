@@ -8,8 +8,12 @@
 
 CAMLprim value perform_fnmatch(value fnm_pathname, value pattern, value string)
 {
-	return Val_bool(!fnmatch(String_val(pattern), String_val(string), 
-				                   Bool_val(fnm_pathname) ? FNM_PATHNAME : 0));
+ char *patt = String_val(pattern);
+
+ if(*patt == '/') patt++;
+
+ return Val_bool(!fnmatch(patt, String_val(string),
+	                  Bool_val(fnm_pathname) ? FNM_PATHNAME : 0));
 }
 
 CAMLprim value perform_utime(value file, value time)
