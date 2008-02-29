@@ -35,7 +35,7 @@ struct
              try
                while true do
                  match readdir d with
-                     "." | ".." | ".git" -> ()
+                     "." | ".." -> ()
                      | n when M.is_ignored ~debug ign_info n -> ()
                      | n ->
                          let n = join path n in
@@ -128,5 +128,5 @@ struct
         in match ign with
              Some b -> b
            | None -> aux (join dname fname) tl
-    in aux fname t.levels
+    in fname = ".git" || aux fname t.levels
 end
