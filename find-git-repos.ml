@@ -23,7 +23,7 @@ module All = Findrepos(Folddir.Make(Folddir.Ignore_none))
 module Gitignored = Findrepos(Folddir.Make(Folddir.Gitignore))
 
 let main () =
-  let usage = "Usage: find-repositories <options>" in
+  let usage = "Usage: find-git-repos <options>" in
   let path = ref "." in
   let find_repos = ref All.find_repositories in
   let zerosep = ref false in

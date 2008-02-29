@@ -22,7 +22,7 @@ end
 module Gitignored = Find(Folddir.Make(Folddir.Gitignore))
 
 let main () =
-  let usage = "Usage: find-gitfiles <options>" in
+  let usage = "Usage: find-git-files <options>" in
   let path = ref "." in
   let zerosep = ref false in
   let specs = [
