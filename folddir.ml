@@ -67,14 +67,34 @@ struct
   open Printf
 
   type glob_type = Accept | Deny
-  type glob = glob_type * string
+  type patt = Simple of string | Noslash of string | Complex of string
+  type glob = glob_type * patt
   type t = { base : string; levels : (string * glob list) list }
 
-  external fnmatch : bool -> string -> string -> bool = "perform_fnmatch"
+  external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
+
+  let string_of_patt = function Simple s | Noslash s | Complex s -> s
+
+  let has_wildcard s =
+    let rec loop s i max =
+      if i < max then
+        match String.unsafe_get s i with
+            '*' | '?' | '[' | '{' -> true
+            | _ -> loop s (i+1) max
+      else false
+    in loop s 0 (String.length s)
+
+  let patt_of_string s =
+    if String.contains s '/' then
+      Complex s
+    else if has_wildcard s then
+      Noslash s
+    else
+      Simple s
 
   let glob_of_string s = match s.[0] with
-      '!' -> (Accept, String.sub s 1 (String.length s - 1))
-    | _ -> (Deny, s)
+      '!' -> (Accept, (patt_of_string (String.sub s 1 (String.length s - 1))))
+    | _ -> (Deny, patt_of_string s)
 
   let collect_globs l =
     let rec aux acc = function
@@ -111,29 +131,28 @@ struct
   let push x (Path (basename, l)) = Path (basename, x :: l)
   let basename (Path (basename, _)) = basename
 
-  let glob_matches glob path =
-    if String.contains glob '/' then
-      fnmatch true glob (string_of_path path)
-    else
-      fnmatch false glob (basename path)
+  let glob_matches patt path = match patt with
+      Simple s -> s = basename path
+    | Noslash s -> fnmatch false s (basename path)
+    | Complex s -> fnmatch true s (string_of_path path)
 
   let is_ignored ?(debug=false) t fname =
     let rec aux path = function
       | [] -> false
       | (dname, globs)::tl ->
         let ign = List.fold_left
-          (fun s (ty, glob) ->
-            if glob_matches glob path then
+          (fun s (ty, patt) ->
+            if glob_matches patt path then
               (match ty with
                   Accept ->
                     if debug then
                         eprintf "ACCEPT %S (matched %S) at %S\n"
-                          (string_of_path path) glob t.base;
+                          (string_of_path path) (string_of_patt patt) t.base;
                     `Kept
                 | Deny ->
                     if debug then
                         eprintf "DENY %S (matched %S) at %S\n"
-                          (string_of_path path) glob t.base;
+                          (string_of_path path) (string_of_patt patt) t.base;
                     `Ignored)
             else s)
           `Dontknow globs
