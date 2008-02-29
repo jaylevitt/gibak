@@ -45,10 +45,10 @@ let entry_of_path path =
 
 module Entries(F : Folddir.S) =
 struct
-  let get_entries ?(verbose=false) path =
+  let get_entries ?(debug=false) path =
     let aux l name stat =
       Continue ({ (entry_of_path (join path name)) with path = name } :: l)
-    in List.rev (F.fold_directory ~verbose aux [] path "")
+    in List.rev (F.fold_directory ~debug aux [] path "")
 end
 
 let write_int os bytes n =
@@ -236,7 +236,7 @@ let main () =
        | `Save -> dump_entries ~verbose:!verbose (!get_entries !path) !file
        | `Compare | `Apply as mode ->
            let stored = read_entries !file in
-           let actual = !get_entries ~verbose:!debug !path in
+           let actual = !get_entries ~debug:!debug !path in
              match mode with
                  `Compare -> print_changes (compare_entries stored actual)
                | `Apply -> apply_changes !path (compare_entries actual stored)

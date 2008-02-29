@@ -7,7 +7,7 @@ let debug = ref false
 
 module Findrepos(F : Folddir.S) =
 struct
-  let find_repositories ?(verbose=false) path =
+  let find_repositories ?(debug=false) path =
     let aux l name stat =
       let dir = join path name in
         match stat.st_kind with
@@ -16,7 +16,7 @@ struct
               with Unix_error _ -> Continue l
             end
           | _ -> Continue l
-    in List.sort compare (F.fold_directory ~verbose aux [] path "")
+    in List.sort compare (F.fold_directory ~debug aux [] path "")
 end
 
 module All = Findrepos(Folddir.Make(Folddir.Ignore_none))
@@ -33,6 +33,6 @@ let main () =
        "--debug", Arg.Set debug, "Debug mode"
      ]
   in Arg.parse specs ignore usage;
-     List.iter print_endline (!find_repos ~verbose:!debug !path)
+     List.iter print_endline (!find_repos ~debug:!debug !path)
 
 let () = main ()

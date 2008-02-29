@@ -6,7 +6,7 @@ sig
   type t
   val init : string -> t
   val update : t -> string -> t
-  val is_ignored : ?verbose:bool -> t -> string -> bool
+  val is_ignored : ?debug:bool -> t -> string -> bool
 end
 
 let join a b = if a <> "" && b <> "" then a ^ "/" ^ b else a ^ b
@@ -17,7 +17,7 @@ module type S =
 sig
   type ignore_info
   val fold_directory :
-    ?verbose:bool -> ('a -> string -> Unix.stats -> 'a fold_acc) -> 'a ->
+    ?debug:bool -> ('a -> string -> Unix.stats -> 'a fold_acc) -> 'a ->
     string -> ?ign_info:ignore_info -> string -> 'a
 end
 
@@ -25,7 +25,7 @@ module Make(M : IGNORE) : S with type ignore_info = M.t =
 struct
   type ignore_info = M.t
 
-  let rec fold_directory ?(verbose=false) f acc base ?(ign_info = M.init base) path =
+  let rec fold_directory ?(debug=false) f acc base ?(ign_info = M.init base) path =
     let acc = ref acc in
     let ign_info = M.update ign_info path in
     let dir = join base path in
@@ -36,7 +36,7 @@ struct
                while true do
                  match readdir d with
                      "." | ".." | ".git" -> ()
-                     | n when M.is_ignored ~verbose ign_info n -> ()
+                     | n when M.is_ignored ~debug ign_info n -> ()
                      | n ->
                          let n = join path n in
                          let stat = lstat (join base n) in
@@ -58,7 +58,7 @@ struct
   type t = unit
   let init _ = ()
   let update () _ = ()
-  let is_ignored ?verbose () _ = false
+  let is_ignored ?debug () _ = false
 end
 
 module Gitignore : IGNORE =
@@ -109,7 +109,7 @@ struct
     else
       fnmatch false glob (Filename.basename name)
 
-  let is_ignored ?(verbose=false) t fname =
+  let is_ignored ?(debug=false) t fname =
     let rec aux fname = function
       | [] -> false
       | (dname, globs)::tl ->
@@ -118,10 +118,10 @@ struct
             if glob_matches glob fname then
               (match ty with
                   Accept ->
-                    if verbose then printf "ACCEPT %S (matched %S)\n" fname glob;
+                    if debug then eprintf "ACCEPT %S (matched %S)\n" fname glob;
                     Some false
                 | Deny ->
-                    if verbose then printf "DENY %S (matched %S)\n" fname glob;
+                    if debug then eprintf "DENY %S (matched %S)\n" fname glob;
                     Some true)
             else s)
           None globs
