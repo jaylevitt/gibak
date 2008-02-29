@@ -104,33 +104,42 @@ struct
     let globs = read_gitignore dir in
       { base = dir; levels = (Filename.basename dir, globs) :: t.levels }
 
-  let glob_matches glob name =
+  type path = Path of string * string list
+
+  let path_of_string s = Path (s, [])
+  let string_of_path (Path (basename, l)) = String.concat "/" (l @ [basename])
+  let push x (Path (basename, l)) = Path (basename, x :: l)
+  let basename (Path (basename, _)) = basename
+
+  let glob_matches glob path =
     if String.contains glob '/' then
-      fnmatch true glob name
+      fnmatch true glob (string_of_path path)
     else
-      fnmatch false glob (Filename.basename name)
+      fnmatch false glob (basename path)
 
   let is_ignored ?(debug=false) t fname =
-    let rec aux fname = function
+    let rec aux path = function
       | [] -> false
       | (dname, globs)::tl ->
         let ign = List.fold_left
           (fun s (ty, glob) ->
-            if glob_matches glob fname then
+            if glob_matches glob path then
               (match ty with
                   Accept ->
                     if debug then
-                      eprintf "ACCEPT %S (matched %S) at %S\n" fname glob t.base;
+                        eprintf "ACCEPT %S (matched %S) at %S\n"
+                          (string_of_path path) glob t.base;
                     `Kept
                 | Deny ->
                     if debug then
-                      eprintf "DENY %S (matched %S) at %S\n" fname glob t.base;
+                        eprintf "DENY %S (matched %S) at %S\n"
+                          (string_of_path path) glob t.base;
                     `Ignored)
             else s)
           `Dontknow globs
         in match ign with
-          | `Dontknow -> aux (join dname fname) tl
+          | `Dontknow -> aux (push dname path) tl
           | `Ignored -> true
           | `Kept -> false
-    in fname = ".git" || aux fname t.levels
+    in fname = ".git" || aux (path_of_string fname) t.levels
 end
