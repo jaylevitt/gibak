@@ -67,15 +67,22 @@ struct
   open Printf
 
   type glob_type = Accept | Deny
+  (* Simple: no wildcards, no slash
+   * Simple_local: leading slash, otherwise no slashes, no wildcards
+   * Endswith: *.whatever, no slashes
+   * Noslash: wildcards, no slashes
+   * Complex: non-prefix slashes, possibly wildcards
+   * *)
   type patt =
       Simple of string | Noslash of string
-    | Complex of string | Endswith of string
+    | Complex of string | Simple_local of string | Endswith of string
   type glob = glob_type * patt
   type t = { base : string; levels : (string * glob list) list }
 
   external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
 
-  let string_of_patt = function Simple s | Noslash s | Complex s | Endswith s -> s
+  let string_of_patt = function
+      Simple s | Noslash s | Complex s | Simple_local s | Endswith s -> s
 
   let has_wildcard s =
     let rec loop s i max =
@@ -87,15 +94,20 @@ struct
     in loop s 0 (String.length s)
 
   let patt_of_string s =
-    if String.contains s '/' then
-      Complex s
-    else let suff = String.sub s 1 (String.length s - 1) in
-      if s.[0] = '*' && not (has_wildcard suff) then
-        Endswith suff
-      else if has_wildcard s then
-        Noslash s
-      else
-        Simple s
+    try
+      match String.rindex s '/' with
+          0 ->
+            let s = String.sub s 1 (String.length s - 1) in
+              if has_wildcard s then Complex s else Simple_local s
+        | _ -> Complex s
+    with Not_found ->
+      let suff = String.sub s 1 (String.length s - 1) in
+        if s.[0] = '*' && not (has_wildcard suff) then
+          Endswith suff
+        else if has_wildcard s then
+          Noslash s
+        else
+          Simple s
 
   let glob_of_string s = match s.[0] with
       '!' -> (Accept, (patt_of_string (String.sub s 1 (String.length s - 1))))
@@ -136,8 +148,9 @@ struct
   let push x (Path (basename, l)) = Path (basename, x :: l)
   let basename (Path (basename, _)) = basename
 
-  let glob_matches patt path = match patt with
+  let glob_matches local patt path = match patt with
       Simple s -> s = basename path
+    | Simple_local s -> if local then s = basename path else false
     | Endswith s ->
         let fname = basename path in
         let l1 = String.length s in
@@ -147,12 +160,12 @@ struct
     | Complex s -> fnmatch true s (string_of_path path)
 
   let is_ignored ?(debug=false) t fname =
-    let rec aux path = function
+    let rec aux local path = function
       | [] -> false
       | (dname, globs)::tl ->
         let ign = List.fold_left
           (fun s (ty, patt) ->
-            if glob_matches patt path then
+            if glob_matches local patt path then
               (match ty with
                   Accept ->
                     if debug then
@@ -167,8 +180,8 @@ struct
             else s)
           `Dontknow globs
         in match ign with
-          | `Dontknow -> aux (push dname path) tl
+          | `Dontknow -> aux false (push dname path) tl
           | `Ignored -> true
           | `Kept -> false
-    in fname = ".git" || aux (path_of_string fname) t.levels
+    in fname = ".git" || aux true (path_of_string fname) t.levels
 end
