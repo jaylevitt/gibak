@@ -67,13 +67,15 @@ struct
   open Printf
 
   type glob_type = Accept | Deny
-  type patt = Simple of string | Noslash of string | Complex of string
+  type patt =
+      Simple of string | Noslash of string
+    | Complex of string | Endswith of string
   type glob = glob_type * patt
   type t = { base : string; levels : (string * glob list) list }
 
   external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
 
-  let string_of_patt = function Simple s | Noslash s | Complex s -> s
+  let string_of_patt = function Simple s | Noslash s | Complex s | Endswith s -> s
 
   let has_wildcard s =
     let rec loop s i max =
@@ -87,10 +89,13 @@ struct
   let patt_of_string s =
     if String.contains s '/' then
       Complex s
-    else if has_wildcard s then
-      Noslash s
-    else
-      Simple s
+    else let suff = String.sub s 1 (String.length s - 1) in
+      if s.[0] = '*' && not (has_wildcard suff) then
+        Endswith suff
+      else if has_wildcard s then
+        Noslash s
+      else
+        Simple s
 
   let glob_of_string s = match s.[0] with
       '!' -> (Accept, (patt_of_string (String.sub s 1 (String.length s - 1))))
@@ -133,6 +138,11 @@ struct
 
   let glob_matches patt path = match patt with
       Simple s -> s = basename path
+    | Endswith s ->
+        let fname = basename path in
+        let l1 = String.length s in
+        let l2 = String.length fname in
+          if l2 < l1 then false else strneq s 0 fname (l2 - l1)
     | Noslash s -> fnmatch false s (basename path)
     | Complex s -> fnmatch true s (string_of_path path)
 
