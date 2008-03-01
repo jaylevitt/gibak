@@ -32,7 +32,7 @@ let main () =
      ]
   in
     Arg.parse specs ignore usage;
-    let print = if !zerosep then printf "%s\000" else print_endline in
+    let print = if !zerosep then printf "%s\000" else printf "%s\n" in
       List.iter print (Gitignored.find_repositories ~debug:!debug !path)
 
 let () = main ()

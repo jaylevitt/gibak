@@ -35,7 +35,7 @@ let main () =
        "--debug", Arg.Set debug, "Debug mode"
      ]
   in Arg.parse specs ignore usage;
-     let print = if !zerosep then printf "%s\000" else print_endline in
+     let print = if !zerosep then printf "%s\000" else printf "%s\n" in
        List.iter print (!find_repos ~debug:!debug !path)
 
 let () = main ()

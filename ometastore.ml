@@ -84,7 +84,7 @@ let common_prefix_chars s1 s2 =
 
 let dump_entries ?(verbose=false) l fname =
   let dump_entry os prev e =
-    if verbose then print_endline e.path;
+    if verbose then printf "%s\n" e.path;
     let pref = common_prefix_chars prev e.path in
     write_int os 2 pref;
     write_xstring os (String.sub e.path pref (String.length e.path - pref));
