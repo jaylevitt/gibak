@@ -70,6 +70,21 @@ function __abort_on_no_gpg() {
     fi
 }
 
+function __handle_git_repositories() {
+    __abort_on_not_initialized
+    cd_to_toplevel
+    rm -f .gitmodules
+    local base=.git/git-repositories
+    mkdir -p $base
+    for rep in $(find-git-repos -i); do
+        mkdir -p $( dirname $base/$rep )
+        rsync -a --delete-after $rep $( dirname $base/$rep )
+        printf '[submodule "%s"]\n\tpath = %s\n\turl= %s\n' \
+                $rep $rep $base/$rep/.git >> .gitmodules
+    done
+    git-add .gitmodules
+    git-submodule init
+}
 
 function init() {
     __abort_on_initialized
@@ -153,6 +168,7 @@ function init() {
 EOF
 
     git-add .gitignore
+    __handle_git_repositories
     git-commit -q -a -m"Initialized by $SCRIPT_NAME"
     echo
     echo "You might be interested in tweaking the ~/.gitignore file"
@@ -190,6 +206,7 @@ function commit() {
     fi
     git-add -v . \
 	|| die "Could not complete addition of files to history store!"
+    __handle_git_repositories
     test -n "$what" || modifier="-a"
     git-commit $modifier -m"Committed on $( date -R )" -- $@
     git-gc --auto || git-gc # the --auto is on newer versions
