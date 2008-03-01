@@ -71,19 +71,21 @@ struct
    * Simple_local: leading slash, otherwise no slashes, no wildcards
    * Endswith: *.whatever, no slashes
    * Noslash: wildcards, no slashes
-   * Complex: non-prefix slashes, possibly wildcards
+   * Nowildcard: non-prefix slashes, no wildcards
+   * Complex: non-prefix slashes, wildcards
    * *)
   type patt =
       Simple of string | Noslash of string
     | Complex of string | Simple_local of string
     | Endswith of string | Endswith_local of string
+    | Nowildcard of string * int
   type glob = glob_type * patt
   type t = (string * glob list) list
 
   external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
 
   let string_of_patt = function
-      Simple s | Noslash s | Complex s -> s
+      Simple s | Noslash s | Complex s | Nowildcard (s, _) -> s
       | Simple_local s -> "/" ^ s
       | Endswith s -> "*." ^ s
       | Endswith_local s -> "/*." ^ s
@@ -111,7 +113,12 @@ struct
                     Endswith_local suff
                   else
                     Complex s
-        | _ -> Complex s
+        | _ ->
+            if not (has_wildcard s) then
+              let l = String.length s in
+                Nowildcard (s, if s.[0] = '/' then l - 1 else l)
+            else
+              Complex s
     with Not_found ->
       let suff = suff1 s in
         if s.[0] = '*' && not (has_wildcard suff) then
@@ -152,14 +159,16 @@ struct
   let update t ~base ~path =
     (Filename.basename path, read_gitignore (join base path)) :: t
 
-  type path = { basename : string; full_name : string Lazy.t }
+  type path = { basename : string; length : int; full_name : string Lazy.t }
 
-  let path_of_string s = { basename = s; full_name = lazy s }
+  let path_of_string s = { basename = s; length = String.length s; full_name = lazy s }
 
   let string_of_path p = Lazy.force p.full_name
 
+  let path_length p = p.length
+
   let push pref p =
-    { basename = p.basename;
+    { basename = p.basename; length = p.length + 1 + String.length pref;
       full_name = lazy (String.concat "/" [pref; string_of_path p]) }
 
   let basename p = p.basename
@@ -177,6 +186,10 @@ struct
     | Endswith_local s -> if local then check_ending s path else false
     | Noslash s -> fnmatch false s (basename path)
     | Complex s -> fnmatch true s (string_of_path path)
+    | Nowildcard (s, l) ->
+        if l = path_length path then
+          fnmatch true s (string_of_path path)
+        else false
 
   let path_of_ign_info t = String.concat "/" (List.rev (List.map fst t))
 
