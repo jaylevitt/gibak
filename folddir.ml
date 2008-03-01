@@ -141,12 +141,17 @@ struct
     let globs = read_gitignore dir in
       { base = dir; levels = (Filename.basename dir, globs) :: t.levels }
 
-  type path = Path of string * string list
+  type path = { basename : string; full_name : string Lazy.t }
 
-  let path_of_string s = Path (s, [])
-  let string_of_path (Path (basename, l)) = String.concat "/" (l @ [basename])
-  let push x (Path (basename, l)) = Path (basename, x :: l)
-  let basename (Path (basename, _)) = basename
+  let path_of_string s = { basename = s; full_name = lazy s }
+
+  let string_of_path p = Lazy.force p.full_name
+
+  let push pref p =
+    { basename = p.basename;
+      full_name = lazy (String.concat "/" [pref; string_of_path p]) }
+
+  let basename p = p.basename
 
   let glob_matches local patt path = match patt with
       Simple s -> s = basename path
