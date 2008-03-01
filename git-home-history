@@ -1,0 +1,448 @@
+#!/bin/bash
+#
+# Copyright (c) 2007 Jean-Francois Richard <jean-francois@richard.name>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+
+
+if ! which git &>/dev/null; then
+    echo "Please Git" >&2
+    echo "See http://git.or.cz for more information about Git" >&2
+    exit 1
+fi
+
+# Autotools defines
+MANDIR="/usr/local/share/man"
+
+SCRIPT_NAME=$(basename $0)
+ORIG_DIR="$( pwd )"
+# Remember that all actions here are to be made in $HOME dir!
+cd ~
+
+# We don't want users complaining.  by default, top permissions
+# "security"
+umask 077
+
+# We don't check for just '.git', as the user might have
+# mounted/linked .git from somewhere else.  Failing on just '-e
+# .git' would make it impossible to have the first commit save its
+# data to a remote mount.  (Since .git has to exist, as a mountpoint)
+function __has_initialized(){
+    test -e .git/objects -o -e .gitignore;
+    return $?
+}
+
+function __abort_on_initialized() {
+    if __has_initialized; then
+	echo "You already have git data in your home directory." >&2
+	echo "Please use '$SCRIPT_NAME rm-all' if you wish to *delete* it." >&2
+	exit 1
+    fi
+}
+
+function __abort_on_not_initialized() {
+    if ! __has_initialized; then
+	echo "You probably did not initialize your home history repository" >&2
+	echo "Please use  '$SCRIPT_NAME init' to initialize it" >&2
+	exit 1
+    fi
+    # further tests
+    source git-sh-setup
+    require_work_tree
+}
+
+function __abort_on_no_gpg() {
+    if ! which gpg >/dev/null; then
+	echo "You need to install GPG to use this feature" >&2
+	exit 1
+    fi
+}
+
+
+function init() {
+    __abort_on_initialized
+
+    # I know it's the default... but let's be explicit!
+    git-init --shared=umask
+    chmod -R u+rwX,go-rwx .git
+
+    # Add a gitweb description
+    echo "git-home-history of $HOME on $(hostname -f)" > .git/description
+
+    # Make sure there is a 'name' field in config... some git scripts
+    # complain if not
+    if test "$(getent passwd | grep $USER | cut -d: -f5)" = ""; then
+	  git config user.name "$USER"
+    fi
+
+    # Check for xdg-user-dirs to provide sane defaults in .gitignore
+    # http://www.freedesktop.org/wiki/Software/xdg-user-dirs
+    test -f ${XDG_CONFIG_HOME:-~/.config}/user-dirs.dirs && source ${XDG_CONFIG_HOME:-~/.config}/user-dirs.dirs
+    XDG_DOWNLOAD_DIR=$( echo ${XDG_DOWNLOAD_DIR#${HOME}} | sed 's:^/*::' )
+    XDG_VIDEOS_DIR=$( echo ${XDG_VIDEOS_DIR#${HOME}} | sed 's:^/*::' )
+    XDG_MUSIC_DIR=$( echo ${XDG_MUSIC_DIR#${HOME}} | sed 's:^/*::' )
+
+    cat << EOF > .gitignore
+#
+# Here are some examples of what you might want to ignore
+# in your git-home-history.  Feel free to modify.
+#
+# Example rules start with '##'.
+# You can remove the '##' to set the rule.
+#
+# The rules are read from top to bottom, so a rule can
+# "cancel" out a previous one.  Be careful.
+#
+# For more information on the syntax used in this file,
+# see "man gitignore" in a terminal or visit
+# http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
+
+##/${XDG_DOWNLOAD_DIR:-Download}
+##/${XDG_VIDEOS_DIR:-Videos}
+##/${XDG_MUSIC_DIR:-Music}
+
+# Notice the '!' below.  This tells git to _not_ ignore a file or
+# directory, in this case, we do not want to ignore a particular
+# directory under Music/, which is ignored according to the rule
+# above.
+
+##!/${XDG_MUSIC_DIR:-Music}/Our_Daughter--Flute
+
+# You probably want to ignore all the "dot" files in your home
+# directory, since they mostly contain local application state data.
+
+##/.*
+# but... some dot files you probably do *not* want ignored are
+# listed here:
+##!/.bash*
+##!/.tcsh*
+##!/.zsh*
+##!/.emacs
+##!/.gnupg
+##!/.mail
+##!/.maildir
+##!/.Maildir
+##!/.mail-aliases
+##!/.muttrc
+##!/.ssh
+##!/.vimrc
+
+# We do not want to track the tracking of other files:
+#.svn
+#CVS
+# Please note that all files in a Git project are ignored
+# e.g. linux-2.6/ will be entirely ignored if linux-2.6/.git exists.
+# Thus it is not necessary to add ".git" here.
+
+# Some editors use some special backup file formats.  Ignore them:
+##.#*
+##*~
+
+EOF
+
+    git-add .gitignore
+    git-commit -q -a -m"Initialized by $SCRIPT_NAME"
+    echo
+    echo "You might be interested in tweaking the ~/.gitignore file"
+    echo
+    echo "Please run '$SCRIPT_NAME commit' to save a first state in your history"
+}
+
+function rm_all() {
+    if __has_initialized; then
+	echo "Removing all git-home-history data, this may take some time "
+        # We don't remove '.git', as the user might have
+        # mounted/linked .git from somewhere else.  Removing the link
+        # would silently brake what the user was expecting; removing a
+        # device mountpoint will fail anyway.
+	rm -rf .git/* 2>/dev/null
+	rm -rf .gitignore 2>/dev/null
+    else
+	echo "Nothing to do"
+    fi
+}
+
+
+function commit() {
+    __abort_on_not_initialized
+    local what=$@
+    local modifier=
+
+    echo "Committing to repository, this may take a long time" >&2
+    # I don't like myself for using such a sloppy way of
+    # removing previously-tracked newly-ignored files...
+    # :(  help me! ahhhhrrrggg
+    # seems like the only way to stop tracking newly-ignored files
+    if git-ls-files -m .gitignore | egrep -q '^.gitignore$'; then
+	git-rm --cached -r -f . >/dev/null
+    fi
+    git-add -v . \
+	|| die "Could not complete addition of files to history store!"
+    test -n "$what" || modifier="-a"
+    git-commit $modifier -m"Committed on $( date -R )" -- $@
+    git-gc --auto || git-gc # the --auto is on newer versions
+}
+
+
+function rm_older_than() {
+    __abort_on_not_initialized
+    local time_spec=$@
+
+    if ! which git-filter-branch &>/dev/null; then
+	echo "Please install a recent version of Git" >&2
+	echo "See http://git.or.cz for more information about Git" >&2
+	exit 1
+    fi
+
+    if test $(git-rev-parse "HEAD@{$time_spec}") = "$(git-rev-parse HEAD)"; then
+	local TMOUT=20
+	echo "You are about to remove *all* commits made before the very last one you made"
+	echo "Press enter or wait 20 seconds to confirm.  Abort with CRTL-C."
+	read
+    fi
+
+    # Something like that
+    git-filter-branch --parent-filter \
+	'test $(git-rev-parse "HEAD@{$time_spec}") = "$GIT_COMMIT" || cat ' \
+	HEAD
+    if test "$?" != "0"; then
+	die "Please make sure you did '$SCRIPT_NAME commit' before removing old files."
+    fi
+
+    # See git mailing list
+    # "Trying to use git-filter-branch to compress history by removing
+    # large, obsolete binary files"
+
+    git reset --soft # was '--hard' on the post...
+    rm -rf .git/refs/original/
+    #vi .git/packed-refs # Use vi to remove the line referring to
+    # refs/original...  No need since we have linear, no tags, nothing
+    # special
+    git-reflog expire --all --expire-unreachable=0
+
+    echo "Committing the removal action"
+
+    # Make sure we are able to tell in a commit that on this
+    # date, a cleanup was made
+    local removal_date=$( date -R )
+    local witness_file=.git-home-history-last-removal
+    local msg="Removed older than '$time_spec' on $removal_date"
+    echo "$msg" > ${witness_file}
+    git add $witness_file
+    git commit -m"$msg" $witness_file
+
+    # Finally make sure everything is ok, and remove old stuff
+    git-gc --prune
+}
+
+
+function show() {
+    __abort_on_not_initialized
+
+    local file_to_restore=$1
+    shift
+    shift # 'as'
+    shift # 'of'
+    local time_spec=$@
+
+    echo "Showing: $HOME/$file_to_restore" >&2
+    GIT_PAGER=cat git-show "HEAD@{'$time_spec'}:$file_to_restore"
+}
+
+function archive_to() {
+    __abort_on_not_initialized
+    __abort_on_no_gpg
+
+    local output="$1"
+
+    if test "$output" != "-"; then
+	output="$ORIG_DIR/${1%.git.tar.gpg}.git.tar.gpg"
+    fi
+
+    echo "Saving archive to '$output'" >&2
+    echo "This may take a long time" >&2
+    tar -cpf - .git | gpg -c --output "$output"
+}
+
+
+function extract_archive_to() {
+    __abort_on_no_gpg
+    local archive="${1%.git}.git"
+
+    # Use the path from where the command was run: ORIG_DIR
+    pushd "$ORIG_DIR" >/dev/null
+
+    if test -e "$archive"; then
+	echo "$(basename $archive) already exists, please move it away" >&2
+	exit 1
+    fi
+
+    echo "Extracting archive, this may take a long time" >&2
+    mkdir "$archive" >&2
+    # We only specify .git to unpack.  Else a user could well unpack
+    # something else and trash his files
+    gpg -d - | tar --strip-components 1 -C"$archive" -xpf - .git
+    echo
+    echo "You can check what files are inside the newly unpacked directory with"
+    echo "GIT_DIR=\"$archive\" gitk"
+    echo "GIT_DIR=\"$archive\" git-home-history ls-stored-files"
+
+    popd >/dev/null
+}
+
+function ls_stored_files() {
+    __abort_on_not_initialized
+
+    if test "$#" -gt "2"; then
+	shift # as
+	shift # of
+	local time_spec="$@"
+	git-ls-tree -r --name-only "HEAD@{$time_spec}"
+    else
+	git-ls-tree -r --name-only HEAD
+    fi
+}
+
+function eat() {
+    __abort_on_not_initialized
+
+    git-add -v -- $@ || die "Could not add '$@' to the history store"
+    commit $@
+    git-rm -r -f -- $@ || die "Problem removing '$@'"
+    rm -rf -- $@ # some empty dirs may remain. clean'em up
+    commit $@
+}
+
+case "$1" in
+    private--init-and-commit)
+	if ! __has_initialized ; then
+	    init
+	fi
+	commit
+	;;
+    init)
+	init
+	;;
+    archive-to)
+	# output can be stdout, using '-' or a file
+	shift
+	archive_to $@
+	;;
+    extract-archive-to)
+	# output can only be a file
+	shift
+	if test "$#" -gt "1"; then
+	    echo "Please specify one output archive file" >&2
+	    echo "e.g. cat archive | $SCRIPT_NAME extract-archive-to machineA.git" >&2
+	    exit 1
+	fi
+	extract_archive_to "$1"
+	;;
+    show)
+	shift
+	if test "$#" -lt "4"; then
+	    echo "Please specify what to show from the history store, as of when" >&2
+	    echo "e.g. $SCRIPT_NAME show 'myfile.txt' as of 2 days ago" >&2
+	    exit 1
+	fi
+	show $@
+	;;
+    commit)
+	commit
+	;;
+    eat)
+	if test "$ORIG_DIR" != "$HOME"; then
+	    echo "Please run this from your home directory" >&2
+	    echo "cd $HOME" >&2
+	    exit 1
+	fi
+	shift
+	if test "$#" -lt "1"; then
+	    echo "Please specify what file or directory to eat" >&2
+	    echo "e.g. $SCRIPT_NAME eat 'myfile.txt'" >&2
+	    exit 1
+	fi
+	eat $@
+	;;
+    rm-older-than)
+	shift
+	if test "$#" = "0"; then
+	    echo "Please add a time specification" >&2
+	    echo "e.g. '1 year ago' or '1979-02-26 18:30:00'" >&2
+	    exit 1
+	fi
+	rm_older_than $@
+	;;
+    rm-all)
+	rm_all
+	;;
+    ls-uncommitted-files)
+	echo "These files are not yet stored:" >&2
+	git-ls-files --exclude-from=.gitignore -o --directory
+	echo "Use '$SCRIPT_NAME commit' to store them" >&2
+	;;
+    ls-ignored-files)
+	echo "Since the last commit, these files are ignored:" >&2
+	git-ls-files --exclude-from=.gitignore -i -o --directory
+	;;
+    ls-stored-files)
+	shift
+	ls_stored_files $@
+	;;
+    --help|-h|help)
+	manfile="${SCRIPT_NAME}.1"
+
+	found=
+	for t in "$MANDIR/man1/$manfile" "$ORIG_DIR/git-home-history.1"; do
+	    if test -e "$t"; then
+		man $t
+		found=1
+		break
+	    fi
+	done
+	if test -z "$found"; then
+	    man git-home-history
+	    if test "$?" != "0"; then
+		echo "Could not find manpage" >&2
+	    fi
+	fi
+	;;
+    *)
+	echo "usage: $SCRIPT_NAME <action>"
+	echo
+	echo "<action> can be:"
+	echo "    help"
+	echo "    init"
+	echo "    commit"
+	echo "    eat <file_or_dir>"
+	echo "    show <file> as of <time_spec>"
+	echo "    ls-uncommitted-files"
+	echo "    ls-ignored-files"
+	echo "    ls-stored-files [as of <time_spec>]"
+	echo "    archive-to <file>"
+	echo "    extract-archive-to <dir>"
+	echo "    rm-all"
+	echo "    rm-older-than <time_spec>"
+	echo 
+	echo "<time_spec> examples:"
+	echo "    5 days ago"
+	echo "    2 days 2 hours 3 seconds ago"
+	echo "    1979-02-26 18:30:00"
+	echo ""
+	echo "see 'man git-home-history' for more information"
+	exit 1
+	;;
+esac
+exit 0
