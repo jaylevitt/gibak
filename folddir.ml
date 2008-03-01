@@ -82,7 +82,9 @@ struct
   external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
 
   let string_of_patt = function
-      Simple s | Noslash s | Complex s | Simple_local s | Endswith s -> s
+      Simple s | Noslash s | Complex s -> s
+      | Simple_local s -> "/" ^ s
+      | Endswith s -> "*." ^ s
 
   let has_wildcard s =
     let rec loop s i max =
