@@ -96,10 +96,9 @@ struct
 
   let init path = { base = path; levels = [] }
 
-  let update t subdir =
-    let base = join t.base subdir in
-    let globs = read_gitignore base in
-      { base = base; levels = (subdir, globs) :: t.levels }
+  let update t dir =
+    let globs = read_gitignore dir in
+      { base = dir; levels = (Filename.basename dir, globs) :: t.levels }
 
   let glob_matches glob name =
     if String.contains glob '/' then
