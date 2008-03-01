@@ -5,7 +5,7 @@ module type IGNORE =
 sig
   type t
   val init : string -> t
-  val update : t -> string -> t
+  val update : t -> base:string -> path:string -> t
   val is_ignored : ?debug:bool -> t -> string -> bool
 end
 
@@ -27,7 +27,7 @@ struct
 
   let rec fold_directory ?(debug=false) f acc base ?(ign_info = M.init base) path =
     let acc = ref acc in
-    let ign_info = M.update ign_info path in
+    let ign_info = M.update ign_info ~base ~path in
     let dir = join base path in
       try
         do_finally (opendir dir) closedir
@@ -58,7 +58,7 @@ module Ignore_none : IGNORE =
 struct
   type t = unit
   let init _ = ()
-  let update () _ = ()
+  let update () ~base ~path = ()
   let is_ignored ?debug () _ = false
 end
 
@@ -77,7 +77,7 @@ struct
       Simple of string | Noslash of string
     | Complex of string | Simple_local of string | Endswith of string
   type glob = glob_type * patt
-  type t = { base : string; levels : (string * glob list) list }
+  type t = (string * glob list) list
 
   external fnmatch : bool -> string -> string -> bool = "perform_fnmatch" "noalloc"
 
@@ -137,11 +137,10 @@ struct
                 with End_of_file -> !l) )
     with Sys_error _ -> []
 
-  let init path = { base = path; levels = [] }
+  let init path = []
 
-  let update t dir =
-    let globs = read_gitignore dir in
-      { base = dir; levels = (Filename.basename dir, globs) :: t.levels }
+  let update t ~base ~path =
+    (Filename.basename path, read_gitignore (join base path)) :: t
 
   type path = { basename : string; full_name : string Lazy.t }
 
@@ -166,10 +165,12 @@ struct
     | Noslash s -> fnmatch false s (basename path)
     | Complex s -> fnmatch true s (string_of_path path)
 
+  let path_of_ign_info t = String.concat "/" (List.rev (List.map fst t))
+
   let is_ignored ?(debug=false) t fname =
     let rec aux local path = function
       | [] -> false
-      | (dname, globs)::tl ->
+      | (dname, globs)::tl as t ->
         let ign = List.fold_left
           (fun s (ty, patt) ->
             if glob_matches local patt path then
@@ -177,12 +178,14 @@ struct
                   Accept ->
                     if debug then
                         eprintf "ACCEPT %S (matched %S) at %S\n"
-                          (string_of_path path) (string_of_patt patt) t.base;
+                          (string_of_path path) (string_of_patt patt)
+                          (path_of_ign_info t);
                     `Kept
                 | Deny ->
                     if debug then
                         eprintf "DENY %S (matched %S) at %S\n"
-                          (string_of_path path) (string_of_patt patt) t.base;
+                          (string_of_path path) (string_of_patt patt)
+                          (path_of_ign_info t);
                     `Ignored)
             else s)
           `Dontknow globs
@@ -190,5 +193,5 @@ struct
           | `Dontknow -> aux false (push dname path) tl
           | `Ignored -> true
           | `Kept -> false
-    in fname = ".git" || aux true (path_of_string fname) t.levels
+    in fname = ".git" || aux true (path_of_string fname) t
 end
