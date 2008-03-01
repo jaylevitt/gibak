@@ -75,7 +75,8 @@ struct
    * *)
   type patt =
       Simple of string | Noslash of string
-    | Complex of string | Simple_local of string | Endswith of string
+    | Complex of string | Simple_local of string
+    | Endswith of string | Endswith_local of string
   type glob = glob_type * patt
   type t = (string * glob list) list
 
@@ -85,6 +86,7 @@ struct
       Simple s | Noslash s | Complex s -> s
       | Simple_local s -> "/" ^ s
       | Endswith s -> "*." ^ s
+      | Endswith_local s -> "/*." ^ s
 
   let has_wildcard s =
     let rec loop s i max =
@@ -95,15 +97,23 @@ struct
       else false
     in loop s 0 (String.length s)
 
+  let suff1 s = String.sub s 1 (String.length s - 1)
+
   let patt_of_string s =
     try
       match String.rindex s '/' with
           0 ->
-            let s = String.sub s 1 (String.length s - 1) in
-              if has_wildcard s then Complex s else Simple_local s
+            let s = suff1 s in
+              if not (has_wildcard s) then Simple_local s
+              else
+                let suff = suff1 s in
+                  if s.[0] = '*' && not (has_wildcard suff) then
+                    Endswith_local suff
+                  else
+                    Complex s
         | _ -> Complex s
     with Not_found ->
-      let suff = String.sub s 1 (String.length s - 1) in
+      let suff = suff1 s in
         if s.[0] = '*' && not (has_wildcard suff) then
           Endswith suff
         else if has_wildcard s then
@@ -112,7 +122,7 @@ struct
           Simple s
 
   let glob_of_string s = match s.[0] with
-      '!' -> (Accept, (patt_of_string (String.sub s 1 (String.length s - 1))))
+      '!' -> (Accept, (patt_of_string (suff1 s)))
     | _ -> (Deny, patt_of_string s)
 
   let collect_globs l =
@@ -154,14 +164,17 @@ struct
 
   let basename p = p.basename
 
+  let check_ending s path =
+    let fname = basename path in
+    let l1 = String.length s in
+    let l2 = String.length fname in
+      if l2 < l1 then false else strneq s 0 fname (l2 - l1)
+
   let glob_matches local patt path = match patt with
       Simple s -> s = basename path
     | Simple_local s -> if local then s = basename path else false
-    | Endswith s ->
-        let fname = basename path in
-        let l1 = String.length s in
-        let l2 = String.length fname in
-          if l2 < l1 then false else strneq s 0 fname (l2 - l1)
+    | Endswith s -> check_ending s path
+    | Endswith_local s -> if local then check_ending s path else false
     | Noslash s -> fnmatch false s (basename path)
     | Complex s -> fnmatch true s (string_of_path path)
 
