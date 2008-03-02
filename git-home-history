@@ -40,7 +40,7 @@ umask 077
 # .git' would make it impossible to have the first commit save its
 # data to a remote mount.  (Since .git has to exist, as a mountpoint)
 function __has_initialized(){
-    test -e .git/objects -o -e .gitignore;
+    test -e .git/objects;
     return $?
 }
 
@@ -109,7 +109,20 @@ function init() {
     XDG_VIDEOS_DIR=$( echo ${XDG_VIDEOS_DIR#${HOME}} | sed 's:^/*::' )
     XDG_MUSIC_DIR=$( echo ${XDG_MUSIC_DIR#${HOME}} | sed 's:^/*::' )
 
-    cat << EOF > .gitignore
+    cat << EOF > .git/hooks/pre-commit
+#!/bin/sh
+
+ometastore -s -i
+git add .ometastore
+EOF
+
+    cat << EOF > .git/hooks/post-checkout
+#!/bin/sh
+
+ometastore -a -i
+EOF
+
+    test -e .gitignore || cat << EOF > .gitignore
 #
 # Here are some examples of what you might want to ignore
 # in your git-home-history.  Feel free to modify.
@@ -168,8 +181,9 @@ function init() {
 EOF
 
     git-add .gitignore
-    __handle_git_repositories
     git-commit -q -a -m"Initialized by $SCRIPT_NAME"
+    chmod u+x .git/hooks/pre-commit
+    chmod u+x .git/hooks/post-checkout
     echo
     echo "You might be interested in tweaking the ~/.gitignore file"
     echo
@@ -181,10 +195,10 @@ function rm_all() {
 	echo "Removing all git-home-history data, this may take some time "
         # We don't remove '.git', as the user might have
         # mounted/linked .git from somewhere else.  Removing the link
-        # would silently brake what the user was expecting; removing a
+        # would silently break what the user was expecting; removing a
         # device mountpoint will fail anyway.
 	rm -rf .git/* 2>/dev/null
-	rm -rf .gitignore 2>/dev/null
+	#rm -rf .gitignore 2>/dev/null
     else
 	echo "Nothing to do"
     fi
