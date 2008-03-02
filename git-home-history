@@ -82,7 +82,7 @@ function __handle_git_repositories() {
         printf '[submodule "%s"]\n\tpath = %s\n\turl= %s\n' \
                 $rep $rep $base/$rep/.git >> .gitmodules
     done
-    git-add .gitmodules
+    git-add -f .gitmodules
     git-submodule init
 }
 
@@ -113,7 +113,7 @@ function init() {
 #!/bin/sh
 
 ometastore -s -i
-git add .ometastore
+git add -f .ometastore
 EOF
 
     cat << EOF > .git/hooks/post-checkout
@@ -180,7 +180,7 @@ EOF
 
 EOF
 
-    git-add .gitignore
+    git-add -f .gitignore
     git-commit -q -a -m"Initialized by $SCRIPT_NAME"
     chmod u+x .git/hooks/pre-commit
     chmod u+x .git/hooks/post-checkout
