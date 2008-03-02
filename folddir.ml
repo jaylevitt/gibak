@@ -1,3 +1,6 @@
+(* Copyright (C) 2008 Mauricio Fernandez <mfp@acm.org> http//eigenclass.org
+ * See README.txt and LICENSE for the redistribution and modification terms *)
+
 open Util
 open Unix
 

@@ -1,3 +1,6 @@
+/* Copyright (C) 2007 Mauricio Fernandez <mfp@acm.org> http//eigenclass.org
+ * See README.txt and LICENSE for the redistribution and modification terms */
+
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/fail.h>

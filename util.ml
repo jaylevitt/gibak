@@ -1,3 +1,5 @@
+(* Copyright (C) 2008 Mauricio Fernandez <mfp@acm.org> http//eigenclass.org
+ * See README.txt and LICENSE for the redistribution and modification terms *)
 
 let do_finally x final f =
   let r = try f x with e -> (try final x with _ -> ()); raise e in final x; r
