@@ -70,6 +70,8 @@ struct
   (* Simple: no wildcards, no slash
    * Simple_local: leading slash, otherwise no slashes, no wildcards
    * Endswith: *.whatever, no slashes
+   * Endswith_local: *.whatever, leading slash only
+   * Startswith_local: whatever*, leading slash only
    * Noslash: wildcards, no slashes
    * Nowildcard: non-prefix slashes, no wildcards
    * Complex: non-prefix slashes, wildcards
@@ -78,6 +80,7 @@ struct
       Simple of string | Noslash of string
     | Complex of string | Simple_local of string
     | Endswith of string | Endswith_local of string
+    | Startswith_local of string
     | Nowildcard of string * int
   type glob = glob_type * patt
   type t = (string * glob list) list
@@ -89,6 +92,7 @@ struct
       | Simple_local s -> "/" ^ s
       | Endswith s -> "*." ^ s
       | Endswith_local s -> "/*." ^ s
+      | Startswith_local s -> "/" ^ s ^ "*"
 
   let has_wildcard s =
     let rec loop s i max =
@@ -100,6 +104,7 @@ struct
     in loop s 0 (String.length s)
 
   let suff1 s = String.sub s 1 (String.length s - 1)
+  let pref1 s = String.sub s 0 (String.length s - 1)
 
   let patt_of_string s =
     try
@@ -112,7 +117,11 @@ struct
                   if s.[0] = '*' && not (has_wildcard suff) then
                     Endswith_local suff
                   else
-                    Complex s
+                    let pref = pref1 s in
+                      if s.[String.length s - 1] = '*' && not (has_wildcard pref) then
+                        Startswith_local pref
+                      else
+                        Complex s
         | _ ->
             if not (has_wildcard s) then
               let l = String.length s in
@@ -173,17 +182,25 @@ struct
 
   let basename p = p.basename
 
-  let check_ending s path =
+  let check_ending suff path =
     let fname = basename path in
-    let l1 = String.length s in
+    let l1 = String.length suff in
     let l2 = String.length fname in
-      if l2 < l1 then false else strneq s 0 fname (l2 - l1)
+      if l2 < l1 then false else strneq l1 suff 0 fname (l2 - l1)
+
+  let check_start pref path =
+    let fname = basename path in
+    let l1 = String.length pref in
+    let l2 = String.length fname in
+      if l2 < l1 then false else
+        strneq l1 pref 0 fname 0
 
   let glob_matches local patt path = match patt with
       Simple s -> s = basename path
     | Simple_local s -> if local then s = basename path else false
     | Endswith s -> check_ending s path
     | Endswith_local s -> if local then check_ending s path else false
+    | Startswith_local s -> if local then check_start s path else false
     | Noslash s -> fnmatch false s (basename path)
     | Complex s -> fnmatch true s (string_of_path path)
     | Nowildcard (s, l) ->
