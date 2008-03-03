@@ -50,7 +50,14 @@ module Entries(F : Folddir.S) =
 struct
   let get_entries ?(debug=false) path =
     let aux l name stat =
-      Continue ({ (entry_of_path (join path name)) with path = name } :: l)
+      let fullname = join path name in
+      let entry = { (entry_of_path fullname) with path = name } in
+        match stat.st_kind with
+          | S_DIR -> begin
+              try access (join fullname ".git") [F_OK]; Prune (entry :: l)
+              with Unix_error _ -> Continue (entry :: l)
+            end
+          | _ -> Continue (entry :: l)
     in List.rev (F.fold_directory ~debug aux [] path "")
 end
 
@@ -228,7 +235,7 @@ let main () =
        "-s", Arg.Unit (fun () -> mode := `Save), "Save metadata";
        "-a", Arg.Unit (fun () -> mode := `Apply), "Apply current metadata";
        "-i", Arg.Unit (fun () -> get_entries := Gitignored.get_entries),
-       "Honor .gitignore specifications";
+       "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
        "-v", Arg.Set verbose, "Verbose mode";
        "--debug", Arg.Set debug, "Debug mode"
