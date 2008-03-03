@@ -212,12 +212,15 @@ function commit() {
     local modifier=
 
     echo "Committing to repository, this may take a long time" >&2
-    # I don't like myself for using such a sloppy way of
-    # removing previously-tracked newly-ignored files...
-    # :(  help me! ahhhhrrrggg
-    # seems like the only way to stop tracking newly-ignored files
     if git-ls-files -m .gitignore | egrep -q '^.gitignore$'; then
-	git-rm --cached -r -f . >/dev/null
+	# I don't like myself for using such a sloppy way of
+	# removing previously-tracked newly-ignored files...
+	# :(  help me! ahhhhrrrggg
+	# seems like the only way to stop tracking newly-ignored files
+	#git-rm --cached -r -f . >/dev/null
+
+	# better way, using ometastore
+        ometastore -d -i -z | xargs -0 git rm --cached -r -f --ignore-unmatch --
     fi
     git-add -v . \
 	|| die "Could not complete addition of files to history store!"
@@ -484,3 +487,4 @@ case "$1" in
 	;;
 esac
 exit 0
+# vim: set noexpandtab sw=4:
