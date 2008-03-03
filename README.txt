@@ -1,4 +1,5 @@
 Copyright (C) 2008 Mauricio Fernandez <mfp@acm.org>
+          (C) 2007 Jean-Francois Richard <jean-francois@richard.name>
 
 gibak -- backup tool based on Git
 =================================
