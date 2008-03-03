@@ -458,7 +458,7 @@ case "$1" in
 	manfile="${SCRIPT_NAME}.1"
 
 	found=
-	for t in "$MANDIR/man1/$manfile" "$ORIG_DIR/git-home-history.1"; do
+	for t in "$MANDIR/man1/$manfile" "$ORIG_DIR/gibak.1"; do
 	    if test -e "$t"; then
 		man $t
 		found=1
@@ -466,7 +466,7 @@ case "$1" in
 	    fi
 	done
 	if test -z "$found"; then
-	    man git-home-history
+	    man gibak
 	    if test "$?" != "0"; then
 		echo "Could not find manpage" >&2
 	    fi
@@ -496,7 +496,7 @@ case "$1" in
 	echo "    2 days 2 hours 3 seconds ago"
 	echo "    1979-02-26 18:30:00"
 	echo ""
-	echo "see 'man git-home-history' for more information"
+	echo "see 'man gibak' for more information"
 	exit 1
 	;;
 esac
