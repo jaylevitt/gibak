@@ -186,6 +186,11 @@ let print_changes =
                [] -> ()
              | l -> printf "Changed %s: %s\n" e1.path (String.concat " " l))
 
+let print_deleted separator =
+  List.iter
+    (function Deleted e -> printf "%s%s" e.path separator
+       | Added _ | Diff _ -> ())
+
 let out s = if !verbose then Printf.fprintf Pervasives.stdout s
             else Printf.ifprintf Pervasives.stdout s
 
@@ -229,14 +234,18 @@ let main () =
   let file = ref ".ometastore" in
   let path = ref "." in
   let get_entries = ref Allentries.get_entries in
+  let sep = ref "\n" in
   let specs = [
        "-c", Arg.Unit (fun () -> mode := `Compare),
-       "Show differences between stored and real metadata";
+       "Show all differences between stored and real metadata";
+       "-d", Arg.Unit (fun () -> mode := `Show_deleted),
+       "Show only files deleted or newly ignored.";
        "-s", Arg.Unit (fun () -> mode := `Save), "Save metadata";
        "-a", Arg.Unit (fun () -> mode := `Apply), "Apply current metadata";
        "-i", Arg.Unit (fun () -> get_entries := Gitignored.get_entries),
        "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
+       "-z", Arg.Unit (fun () -> sep := "\000"), "Use \\0 to separate filenames.";
        "-v", Arg.Set verbose, "Verbose mode";
        "--debug", Arg.Set debug, "Debug mode"
      ]
@@ -244,11 +253,12 @@ let main () =
      match !mode with
        | `Unset -> Arg.usage specs usage
        | `Save -> dump_entries ~verbose:!verbose (!get_entries !path) !file
-       | `Compare | `Apply as mode ->
+       | `Show_deleted | `Compare | `Apply as mode ->
            let stored = read_entries !file in
            let actual = !get_entries ~debug:!debug !path in
              match mode with
                  `Compare -> print_changes (compare_entries stored actual)
                | `Apply -> apply_changes !path (compare_entries actual stored)
+               | `Show_deleted -> print_deleted !sep (compare_entries stored actual)
 
 let () = main ()
