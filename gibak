@@ -420,14 +420,19 @@ case "$1" in
     rm-all)
 	rm_all
 	;;
-    ls-uncommitted-files)
+    ls-changed-files)
+        echo "These files have been modified:" >&2
+        git-ls-files --exclude-standard -m
+	echo "Use '$SCRIPT_NAME commit' to store them" >&2
+        ;;
+    ls-new-files)
 	echo "These files are not yet stored:" >&2
-	git-ls-files --exclude-from=.gitignore -o --directory
+	git-ls-files --exclude-standard -o
 	echo "Use '$SCRIPT_NAME commit' to store them" >&2
 	;;
     ls-ignored-files)
 	echo "Since the last commit, these files are ignored:" >&2
-	git-ls-files --exclude-from=.gitignore -i -o --directory
+	git-ls-files --exclude-standard -i -o --directory
 	;;
     ls-stored-files)
 	shift
@@ -460,7 +465,8 @@ case "$1" in
 	echo "    commit"
 	echo "    eat <file_or_dir>"
 	echo "    show <file> as of <time_spec>"
-	echo "    ls-uncommitted-files"
+	echo "    ls-changed-files"
+	echo "    ls-new-files"
 	echo "    ls-ignored-files"
 	echo "    ls-stored-files [as of <time_spec>]"
 	echo "    archive-to <file>"
