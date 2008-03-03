@@ -7,4 +7,9 @@ _build
 *.cm[aiox]
 *.cmxa
 *.opt
+*.run
+*.s
+*.annot
 ometastore
+find-git-files
+find-git-repos
