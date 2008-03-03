@@ -10,12 +10,12 @@ let debug = ref false
 
 module Find(F : Folddir.S) =
 struct
-  let find_repositories ?(debug=false) path =
+  let find ?(debug=false) path =
     let aux l name stat =
       let dir = join path name in
         match stat.st_kind with
           | S_DIR -> begin
-              try access (join dir ".git") [F_OK]; Prune l
+              try access (join dir ".git") [F_OK]; Prune (name :: l)
               with Unix_error _ -> Continue (name :: l)
             end
           | _ -> Continue (name :: l)
@@ -36,6 +36,6 @@ let main () =
   in
     Arg.parse specs ignore usage;
     let print = if !zerosep then printf "%s\000" else printf "%s\n" in
-      List.iter print (Gitignored.find_repositories ~debug:!debug !path)
+      List.iter print (Gitignored.find ~debug:!debug !path)
 
 let () = main ()
