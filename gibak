@@ -74,10 +74,12 @@ function __abort_on_no_gpg() {
 function __handle_git_repositories() {
     __abort_on_not_initialized
     cd_to_toplevel
+    echo "Managing submodules." >&2
     rm -f .gitmodules
     local base=.git/git-repositories
     mkdir -p $base
     for rep in $(find-git-repos -i); do
+	echo "  submodule $rep" >&2
         mkdir -p $( dirname $base/$rep )
         rsync -a --delete-after $rep $( dirname $base/$rep )
         printf '[submodule "%s"]\n\tpath = %s\n\turl= %s\n' \
@@ -212,7 +214,8 @@ function commit() {
     local modifier=
 
     echo "Committing to repository, this may take a long time" >&2
-    if git-ls-files -m .gitignore | egrep -q '^.gitignore$'; then
+    if git-ls-files -m -o --exclude-standard | egrep -q '(^|/).gitignore$'; then
+	echo "Some .gitignore added or modified, determining newly ignored files." >&2
 	# I don't like myself for using such a sloppy way of
 	# removing previously-tracked newly-ignored files...
 	# :(  help me! ahhhhrrrggg
@@ -220,13 +223,17 @@ function commit() {
 	#git-rm --cached -r -f . >/dev/null
 
 	# better way, using ometastore
-        ometastore -d -i -z | xargs -0 git rm --cached -r -f --ignore-unmatch --
+        ometastore -d -i -z | \
+	xargs -0 git rm --cached -r -f --ignore-unmatch -- 2>/dev/null
     fi
+    echo "Adding new and modified files." >&2
     git-add -v . \
 	|| die "Could not complete addition of files to history store!"
     __handle_git_repositories
     test -n "$what" || modifier="-a"
+    echo "Committing." >&2
     git-commit $modifier -m"Committed on $( date -R )" -- $@
+    echo "Optimizing and compacting repository (might take a while)." >&2
     git-gc --auto || git-gc # the --auto is on newer versions
 }
 
@@ -434,8 +441,14 @@ case "$1" in
 	echo "Use '$SCRIPT_NAME commit' to store them" >&2
 	;;
     ls-ignored-files)
-	echo "Since the last commit, these files are ignored:" >&2
+	echo "These files are ignored:" >&2
 	git-ls-files --exclude-standard -i -o --directory
+	;;
+    ls-newly-ignored-files)
+        echo "These files have been ignored since the last commit:" >&2
+	if git-ls-files -m -o --exclude-standard | egrep -q '(^|/).gitignore$'; then
+	    ometastore -d -i | sort
+	fi
 	;;
     ls-stored-files)
 	shift
@@ -471,6 +484,7 @@ case "$1" in
 	echo "    ls-changed-files"
 	echo "    ls-new-files"
 	echo "    ls-ignored-files"
+	echo "    ls-newly-ignored-files"
 	echo "    ls-stored-files [as of <time_spec>]"
 	echo "    archive-to <file>"
 	echo "    extract-archive-to <dir>"
