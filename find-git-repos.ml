@@ -33,7 +33,7 @@ let main () =
   let specs = [
        "--path", Arg.Set_string path, "Set base path (default: .)";
        "-i", Arg.Unit (fun () -> find_repos := Gitignored.find_repositories),
-       "Honor .gitignore specifications";
+       "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-z", Arg.Set zerosep, "Use \\0 to separate filenames.";
        "--debug", Arg.Set debug, "Debug mode"
      ]
