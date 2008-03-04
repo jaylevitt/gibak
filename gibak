@@ -115,7 +115,7 @@ function init() {
     cat << EOF > .git/hooks/pre-commit
 #!/bin/sh
 
-ometastore -s -i
+ometastore -s -i --sort
 git add -f .ometastore
 EOF
 
