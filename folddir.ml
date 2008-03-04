@@ -169,7 +169,16 @@ struct
   let init path = []
 
   let update t ~base ~path =
-    (Filename.basename path, read_gitignore (join base path)) :: t
+     let rec remove_local = function
+        [] -> []
+      | ((_, (Simple _ | Noslash _ | Complex _ | Endswith _ | Nowildcard _)) as x)::tl ->
+          x :: remove_local tl
+      | (_, (Simple_local _ | Endswith_local _ | Startswith_local _))::tl ->
+          remove_local tl in
+    let t = match t with
+        (f, l)::tl -> (f, remove_local l)::tl
+      | [] -> []
+    in (Filename.basename path, read_gitignore (join base path)) :: t
 
   type path = { basename : string; length : int; full_name : string Lazy.t }
 
