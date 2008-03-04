@@ -204,13 +204,13 @@ let fix_usergroup e =
 
 let apply_change = function
   | Added e when e.kind = S_DIR ->
-      out "%s: mkdir (mode %d)\n" e.path e.mode;
+      out "%s: mkdir (mode %04o)\n" e.path e.mode;
       Unix.mkdir e.path e.mode
   | Deleted _ | Added _ -> ()
   | Diff (e1, e2) ->
       if e1.owner <> e2.owner || e1.group <> e2.group then fix_usergroup e2;
       if e1.mode <> e2.mode then begin
-        out "%s: chmod %d\n" e2.path e2.mode;
+        out "%s: chmod %04o\n" e2.path e2.mode;
         chmod e2.path e2.mode;
       end;
       if e1.kind <> e2.kind then
