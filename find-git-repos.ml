@@ -30,15 +30,18 @@ let main () =
   let path = ref "." in
   let find_repos = ref All.find_repositories in
   let zerosep = ref false in
+  let sorted = ref false in
   let specs = [
        "--path", Arg.Set_string path, "Set base path (default: .)";
        "-i", Arg.Unit (fun () -> find_repos := Gitignored.find_repositories),
        "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-z", Arg.Set zerosep, "Use \\0 to separate filenames.";
+       "-s", Arg.Set sorted, "Sort output.";
        "--debug", Arg.Set debug, "Debug mode"
      ]
   in Arg.parse specs ignore usage;
      let print = if !zerosep then printf "%s\000" else printf "%s\n" in
-       List.iter print (!find_repos ~debug:!debug !path)
+     let l = !find_repos ~debug:!debug !path in
+       List.iter print (if !sorted then List.sort compare l else l)
 
 let () = main ()

@@ -20,7 +20,8 @@ module type S =
 sig
   type ignore_info
   val fold_directory :
-    ?debug:bool -> ('a -> string -> Unix.stats -> 'a fold_acc) -> 'a ->
+    ?debug:bool -> ?sorted:bool ->
+    ('a -> string -> Unix.stats -> 'a fold_acc) -> 'a ->
     string -> ?ign_info:ignore_info -> string -> 'a
 end
 
@@ -28,31 +29,33 @@ module Make(M : IGNORE) : S with type ignore_info = M.t =
 struct
   type ignore_info = M.t
 
-  let rec fold_directory ?(debug=false) f acc base ?(ign_info = M.init base) path =
+  let rec fold_directory ?(debug=false) ?(sorted=false) f acc base
+                         ?(ign_info = M.init base) path =
+    let readd d =
+      let l = ref [] in
+      try while true do l := readdir d :: !l done; assert false
+      with End_of_file -> !l in
     let acc = ref acc in
     let ign_info = M.update ign_info ~base ~path in
     let dir = join base path in
       try
         do_finally (opendir dir) closedir
           (fun d ->
-             try
-               while true do
-                 match readdir d with
-                     "." | ".." -> ()
-                     | n when M.is_ignored ~debug ign_info n -> ()
-                     | n ->
-                         let n = join path n in
-                         let stat = lstat (join base n) in
-                           match f !acc n stat with
-                             | Continue x ->
-                                 acc := x;
-                                 if stat.st_kind = S_DIR then
-                                   acc := fold_directory ~debug f ~ign_info
-                                            !acc base n
-                             | Prune x -> acc := x
-               done;
-               assert false
-             with End_of_file -> ());
+             List.iter
+               (function
+                    "." | ".." -> ()
+                  | n when M.is_ignored ~debug ign_info n -> ()
+                  | n ->
+                      let n = join path n in
+                      let stat = lstat (join base n) in
+                        match f !acc n stat with
+                          | Continue x ->
+                              acc := x;
+                              if stat.st_kind = S_DIR then
+                                acc := fold_directory ~debug ~sorted f ~ign_info
+                                         !acc base n
+                          | Prune x -> acc := x)
+               (let l = readd d in if sorted then List.sort compare l else l));
         !acc
       with Unix.Unix_error _ -> !acc
 end

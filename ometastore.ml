@@ -48,7 +48,7 @@ let entry_of_path path =
 
 module Entries(F : Folddir.S) =
 struct
-  let get_entries ?(debug=false) path =
+  let get_entries ?(debug=false) ?(sorted=false) path =
     let aux l name stat =
       let fullname = join path name in
       let entry = { (entry_of_path fullname) with path = name } in
@@ -58,7 +58,7 @@ struct
               with Unix_error _ -> Continue (entry :: l)
             end
           | _ -> Continue (entry :: l)
-    in List.rev (F.fold_directory ~debug aux [] path "")
+    in List.rev (F.fold_directory ~debug ~sorted aux [] path "")
 end
 
 let write_int os bytes n =
@@ -92,7 +92,7 @@ let common_prefix_chars s1 s2 =
     if String.length s1 = 0 || String.length s2 = 0 then 0
     else loop s1 s2 0 (min (String.length s1 - 1) (String.length s2 -1))
 
-let dump_entries ?(verbose=false) l fname =
+let dump_entries ?(verbose=false) ?(sorted=false) l fname =
   let dump_entry os prev e =
     if verbose then printf "%s\n" e.path;
     let pref = common_prefix_chars prev e.path in
@@ -111,7 +111,8 @@ let dump_entries ?(verbose=false) l fname =
   in do_finally (open_out_bin fname) close_out begin fun os ->
     output_string os (magic ^ "\n");
     output_string os (version ^ "\n");
-    ignore (List.fold_left (dump_entry os) "" l)
+    let l = if sorted then List.sort compare l else l in
+      ignore (List.fold_left (dump_entry os) "" l)
   end
 
 let read_entries fname =
@@ -166,7 +167,7 @@ let compare_entries l1 l2 =
       [] l1
   in List.rev (List.rev_append deletions changes)
 
-let print_changes =
+let print_changes ?(sorted=false) l =
   List.iter
     (function
          Added e -> printf "Added: %s\n" e.path
@@ -185,11 +186,14 @@ let print_changes =
            in match List.rev diffs with
                [] -> ()
              | l -> printf "Changed %s: %s\n" e1.path (String.concat " " l))
+    (if sorted then List.sort compare l else l)
 
-let print_deleted separator =
+let print_deleted ?(sorted=false) separator l =
   List.iter
     (function Deleted e -> printf "%s%s" e.path separator
        | Added _ | Diff _ -> ())
+    (if sorted then List.sort compare l else l)
+
 
 let out s = if !verbose then Printf.fprintf Pervasives.stdout s
             else Printf.ifprintf Pervasives.stdout s
@@ -235,6 +239,7 @@ let main () =
   let path = ref "." in
   let get_entries = ref Allentries.get_entries in
   let sep = ref "\n" in
+  let sorted = ref false in
   let specs = [
        "-c", Arg.Unit (fun () -> mode := `Compare),
        "Show all differences between stored and real metadata";
@@ -246,19 +251,23 @@ let main () =
        "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
        "-z", Arg.Unit (fun () -> sep := "\000"), "Use \\0 to separate filenames.";
+       "--sort", Arg.Set sorted, "Sort output by filename.";
        "-v", Arg.Set verbose, "Verbose mode";
        "--debug", Arg.Set debug, "Debug mode"
      ]
   in Arg.parse specs ignore usage;
      match !mode with
        | `Unset -> Arg.usage specs usage
-       | `Save -> dump_entries ~verbose:!verbose (!get_entries !path) !file
+       | `Save ->
+           dump_entries ~sorted:!sorted ~verbose:!verbose (!get_entries !path) !file
        | `Show_deleted | `Compare | `Apply as mode ->
            let stored = read_entries !file in
            let actual = !get_entries ~debug:!debug !path in
              match mode with
-                 `Compare -> print_changes (compare_entries stored actual)
+                 `Compare ->
+                   print_changes ~sorted:!sorted (compare_entries stored actual)
                | `Apply -> apply_changes !path (compare_entries actual stored)
-               | `Show_deleted -> print_deleted !sep (compare_entries stored actual)
+               | `Show_deleted ->
+                   print_deleted ~sorted:!sorted !sep (compare_entries stored actual)
 
 let () = main ()
