@@ -38,7 +38,7 @@ The normal workflow is:
  $ vim .gitignore    # edit to make sure you don't import unwanted files
                      # edit .gitignore files in other subdirectories
                      # you can get a list of the files which will be saved
-                     # with  find-git-files  or  gibak ls-uncommited-files
+                     # with  find-git-files  or  gibak ls-new-files
  $ gibak commit      # the first commit will be fairly slow, but the following
                      # ones will be very fast
                      # it takes half an hour to import 2GB worth of data
