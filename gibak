@@ -85,6 +85,7 @@ function __handle_git_repositories() {
         printf '[submodule "%s"]\n\tpath = %s\n\turl= %s\n' \
                 $rep $rep $base/$rep/.git >> .gitmodules
     done
+    touch .gitmodules
     git-add -f .gitmodules
     git-submodule init
 }
