@@ -80,9 +80,8 @@ function __handle_git_repositories() {
     mkdir -p $base
     find-git-repos -i -z | while read -d $'\0' rep; do
 	echo "  submodule $rep" >&2
-	mkdir -p $( dirname "$base/$rep" )
-	rsync -a -F --delete-excluded --delete-after \
-	    "$rep" "$( dirname "$base/$rep" )"
+	rsync -a -F --relative --delete-excluded --delete-after \
+	    "$rep" "$base"
 	printf '[submodule "%s"]\n\tpath = %s\n\turl= %s\n' \
 	    "$rep" "$rep" "$base/$rep/.git" >> .gitmodules
     done
