@@ -78,7 +78,7 @@ function __handle_git_repositories() {
     rm -f .gitmodules
     local base=.git/git-repositories
     mkdir -p $base
-    for rep in $(find-git-repos -i); do
+    find-git-repos -i -z | while read -d $'\0' rep; do
 	echo "  submodule $rep" >&2
 	mkdir -p $( dirname "$base/$rep" )
 	rsync -a -F --delete-excluded --delete-after \
