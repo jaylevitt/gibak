@@ -9,6 +9,7 @@ open Util
 let debug = ref false
 let verbose = ref false
 let use_mtime = ref false
+let use_xattrs = ref false
 let magic = "Ometastore"
 let version = "1.0.0"
 
@@ -27,6 +28,8 @@ type entry = {
 type whatsnew = Added of entry | Deleted of entry | Diff of entry * entry
 
 external utime : string -> int -> unit = "perform_utime"
+external llistxattr : string -> string list = "perform_llistxattr"
+external lgetxattr : string -> string -> string = "perform_lgetxattr"
 
 let user_name = memoized (fun uid -> (getpwuid uid).pw_name)
 let group_name = memoized (fun gid -> (getgrgid gid).gr_name)
@@ -43,8 +46,15 @@ let entry_of_path path =
   let s = lstat path in
   let user = user_name s.st_uid in
   let group = group_name s.st_gid in
+  let xattrs = match !use_xattrs with
+      false -> []
+    | true ->
+        List.map
+          (fun attr -> { name = attr; value = lgetxattr path attr; })
+          (List.sort compare (llistxattr path))
+  in
     { path = path; owner = user; group = group; mode = s.st_perm;
-      kind = s.st_kind; mtime = s.st_mtime; xattrs = [] }
+      kind = s.st_kind; mtime = s.st_mtime; xattrs = xattrs }
 
 module Entries(F : Folddir.S) =
 struct
@@ -132,7 +142,7 @@ let read_entries fname =
           attrs := { name = name; value = value } :: !attrs
       done;
       { path = path; owner = owner; group = group; mtime = mtime; mode = mode;
-        kind = kind; xattrs = !attrs }
+        kind = kind; xattrs = List.rev !attrs }
   in do_finally (open_in_bin fname) close_in begin fun is ->
     if magic <> input_line is then failwith "Invalid file: bad magic";
     let _ = input_line is (* version *) in
@@ -148,22 +158,23 @@ let read_entries fname =
       with End_of_file -> !entries
   end
 
+module SMap = Map.Make(struct type t = string let compare = compare end)
+
 let compare_entries l1 l2 =
-  let module M = Map.Make(struct type t = string let compare = compare end) in
-  let to_map l = List.fold_left (fun m e -> M.add e.path e m) M.empty l in
+  let to_map l = List.fold_left (fun m e -> SMap.add e.path e m) SMap.empty l in
   let m1 = to_map l1 in
   let m2 = to_map l2 in
   let changes =
     List.fold_left
       (fun changes e2 ->
          try
-           let e1 = M.find e2.path m1 in
+           let e1 = SMap.find e2.path m1 in
              if e1 = e2 then changes else Diff (e1, e2) :: changes
          with Not_found -> Added e2 :: changes)
       [] l2 in
   let deletions =
     List.fold_left
-      (fun dels e1 -> if M.mem e1.path m2 then dels else Deleted e1 :: dels)
+      (fun dels e1 -> if SMap.mem e1.path m2 then dels else Deleted e1 :: dels)
       [] l1
   in List.rev (List.rev_append deletions changes)
 
@@ -202,6 +213,25 @@ let fix_usergroup e =
   out "%s: set owner/group to %S %S\n" e.path e.owner e.group;
   chown e.path (getpwnam e.owner).pw_uid (getgrnam e.group).gr_gid
 
+let fix_xattrs src dst =
+  out "%s: fixing xattrs (" src.path;
+  let to_map l =
+    List.fold_left (fun m e -> SMap.add e.name e.value m) SMap.empty l in
+  let set_attr name value =
+    out "%s, " name;
+    () (* TODO: lsetxattr *) in
+  let src = to_map src.xattrs in
+  let dst = to_map dst.xattrs in
+    SMap.iter
+      (fun name value ->
+         try
+           if SMap.find name dst <> SMap.find name src then set_attr name value
+         with Not_found -> set_attr name value
+           | Failure _ -> () (* error in lsetxattr, ignored *))
+      dst;
+    (* TODO: delete no-longer-existent attributes? *)
+    out ")\n"
+
 let apply_change = function
   | Added e when e.kind = S_DIR ->
       out "%s: mkdir (mode %04o)\n" e.path e.mode;
@@ -218,7 +248,8 @@ let apply_change = function
       if !use_mtime && e1.mtime <> e2.mtime then begin
         out "%s: mtime set to %.0f\n" e1.path e2.mtime;
         utime e2.path (int_of_float e2.mtime)
-      end
+      end;
+      if !use_xattrs && e1.xattrs <> e2.xattrs then fix_xattrs e1 e2
 
 let apply_changes path l =
   List.iter apply_change
@@ -250,6 +281,7 @@ let main () =
        "-i", Arg.Unit (fun () -> get_entries := Gitignored.get_entries),
        "Mimic git semantics (honor .gitignore, don't scan git submodules)";
        "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
+       "-x", Arg.Set use_xattrs, "Consider extended attributes for diff and apply";
        "-z", Arg.Unit (fun () -> sep := "\000"), "Use \\0 to separate filenames.";
        "--sort", Arg.Set sorted, "Sort output by filename.";
        "-v", Arg.Set verbose, "Verbose mode";
