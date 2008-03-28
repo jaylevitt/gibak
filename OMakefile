@@ -1,13 +1,21 @@
-BYTE_ENABLED = true
 
 # Include path for the caml headers <caml/mlvalues.h> and friends.  
 # You might need something this if you have installed OCaml manually or via
 # something like macports:
 #INCLUDES += /opt/local/lib/ocaml
 
+# Uncomment one of the following if you want support for extended attributes,
+# depending on your OS:
+#CFLAGS = -DHAVE_OSX_XATTR
 #CFLAGS = -DHAVE_LINUX_XATTR
+
+# This might be needed if you are using -DHAVE_LINUX_XATTR and are using an
+# older version of glibc, to link against libattr1.
 #OCAMLFLAGS += -cclib -lattr
 
+# === No change should be needed after this line. ===
+
+BYTE_ENABLED = true
 OCAMLFLAGS += -dtypes
 OCAMLOPTFLAGS += -inline 10 -S
 

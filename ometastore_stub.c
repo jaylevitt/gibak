@@ -12,6 +12,18 @@
 #include <sys/xattr.h>
 #endif
 
+#ifdef HAVE_LINUX_XATTR
+
+#define LLISTXATTR(f, buf, s) (llistxattr(f, buf, s))
+#define LGETXATTR(f, nam, buf, s) (lgetxattr(f, nam, buf, s))
+
+#elif defined(HAVE_OSX_XATTR)
+
+#define LLISTXATTR(f, buf, s) (listxattr(f, buf, s, XATTR_NOFOLLOW))
+#define LGETXATTR(f, nam, buf, s) (getxattr(f, nam, buf, s, 0, XATTR_NOFOLLOW))
+
+#endif
+
 CAMLprim value perform_fnmatch(value fnm_pathname, value pattern, value string)
 {
  char *patt = String_val(pattern);
@@ -34,7 +46,7 @@ CAMLprim value perform_utime(value file, value time)
 	return(Val_int(0));
 }
 
-#ifdef HAVE_LINUX_XATTR
+#ifdef LLISTXATTR
 
 CAMLprim value perform_llistxattr(value file)
 {
@@ -43,15 +55,14 @@ CAMLprim value perform_llistxattr(value file)
  ssize_t siz, i;
  char *p, *porig;
 
- siz = llistxattr(String_val(file), NULL, 0);
+ siz = LLISTXATTR(String_val(file), NULL, 0);
  if(siz == 0)
      CAMLreturn(Val_int(0));
-
  if(siz < 0)
      caml_failwith("llistxattr");
 
  porig = p = malloc(siz);
- siz = llistxattr(String_val(file), p, siz);
+ siz = LLISTXATTR(String_val(file), p, siz);
  if(siz < 0) {
      free(p);
      caml_failwith("llistxattr");
@@ -77,12 +88,12 @@ CAMLprim value perform_lgetxattr(value file, value name)
  CAMLlocal1(ret);
  ssize_t siz;
 
- siz = lgetxattr(String_val(file), String_val(name), NULL, 0);
+ siz = LGETXATTR(String_val(file), String_val(name), NULL, 0);
  if(siz < 0)
      caml_failwith("lgetxattr");
 
  ret = caml_alloc_string(siz);
- if(lgetxattr(String_val(file), String_val(name), String_val(ret), siz) < 0) {
+ if(LGETXATTR(String_val(file), String_val(name), String_val(ret), siz) < 0) {
      caml_failwith("lgetxattr");
  }
 
