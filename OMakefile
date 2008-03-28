@@ -1,5 +1,10 @@
 BYTE_ENABLED = true
 
+# Include path for the caml headers <caml/mlvalues.h> and friends.  
+# You might need something this if you have installed OCaml manually or via
+# something like macports:
+#INCLUDES += /opt/local/lib/ocaml
+
 OCAMLFLAGS += -dtypes
 # OCAMLCFLAGS   +=
 OCAMLOPTFLAGS += -inline 10 -S
@@ -18,3 +23,8 @@ OCamlProgram(find-git-repos, folddir util find-git-repos)
 OCamlProgram(find-git-files, folddir util find-git-files)
 
 .DEFAULT: ometastore find-git-files find-git-repos
+
+.PHONY: clean
+
+clean:
+	rm -f $(filter-proper-targets $(ls R, .)) *.s *.annot
