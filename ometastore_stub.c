@@ -1,4 +1,4 @@
-/* Copyright (C) 2007 Mauricio Fernandez <mfp@acm.org> http//eigenclass.org
+/* Copyright (C) 2008 Mauricio Fernandez <mfp@acm.org> http//eigenclass.org
  * See README.txt and LICENSE for the redistribution and modification terms */
 
 #include <caml/mlvalues.h>
@@ -8,6 +8,9 @@
 #include <sys/types.h>
 #include <utime.h>
 
+#if defined(HAVE_LINUX_XATTR) || defined(HAVE_OSX_XATTR)
+#include <sys/xattr.h>
+#endif
 
 CAMLprim value perform_fnmatch(value fnm_pathname, value pattern, value string)
 {
@@ -30,3 +33,74 @@ CAMLprim value perform_utime(value file, value time)
 
 	return(Val_int(0));
 }
+
+#ifdef HAVE_LINUX_XATTR
+
+CAMLprim value perform_llistxattr(value file)
+{
+ CAMLparam1(file);
+ CAMLlocal2(l, prev);
+ ssize_t siz, i;
+ char *p, *porig;
+
+ siz = llistxattr(String_val(file), NULL, 0);
+ if(siz == 0)
+     CAMLreturn(Val_int(0));
+
+ if(siz < 0)
+     caml_failwith("llistxattr");
+
+ porig = p = malloc(siz);
+ siz = llistxattr(String_val(file), p, siz);
+ if(siz < 0) {
+     free(p);
+     caml_failwith("llistxattr");
+ }
+
+ prev = Val_int(0);
+ for(i = 0; i < siz;) {
+     l = caml_alloc(2, 0);
+     Store_field(l, 0, caml_copy_string(p));
+     Store_field(l, 1, prev);
+     prev = l;
+     while(*p++) /* skip */ i++;
+     ++p; ++i;
+ }
+
+ free(porig);
+ CAMLreturn(l);
+}
+
+CAMLprim value perform_lgetxattr(value file, value name)
+{
+ CAMLparam2(file, name);
+ CAMLlocal1(ret);
+ ssize_t siz;
+
+ siz = lgetxattr(String_val(file), String_val(name), NULL, 0);
+ if(siz < 0)
+     caml_failwith("lgetxattr");
+
+ ret = caml_alloc_string(siz);
+ if(lgetxattr(String_val(file), String_val(name), String_val(ret), siz) < 0) {
+     caml_failwith("lgetxattr");
+ }
+
+ CAMLreturn(ret);
+}
+
+#else
+
+CAMLprim value perform_llistxattr(value file)
+{
+ return(Val_int(0));
+}
+
+CAMLprim value perform_lgetxattr(value file, value name)
+{
+ CAMLparam2(file, name);
+
+ caml_failwith("lgetxattr");
+}
+
+#endif

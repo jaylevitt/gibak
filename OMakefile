@@ -5,16 +5,14 @@ BYTE_ENABLED = true
 # something like macports:
 #INCLUDES += /opt/local/lib/ocaml
 
+#CFLAGS = -DHAVE_LINUX_XATTR
+#OCAMLFLAGS += -cclib -lattr
+
 OCAMLFLAGS += -dtypes
-# OCAMLCFLAGS   +=
 OCAMLOPTFLAGS += -inline 10 -S
-# OCAML_LINK_FLAGS +=
-# OCAML_BYTE_LINK_FLAGS +=
-# OCAML_NATIVE_LINK_FLAGS +=
 
 StaticCLibrary(ometastore_stub, ometastore_stub)
 
-PROGRAM = ometastore
 OCAML_CLIBS += ometastore_stub
 OCAML_OTHER_LIBS += unix str
 
