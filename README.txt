@@ -14,6 +14,15 @@ gibak uses Git's hook system to save and restore the information Git doesn't
 track itself such as permissions, empty directories and optionally mtime
 fields.
 
+Dependencies
+============
+gibak needs the following software at run-time:
+* git (tested with git version 1.5.4.2, might work with earlier versions)
+* rsync >= 2.6.4 (released on 30 March 2005), used to manage nested git
+  repositories (submodules)
+* common un*x userland: bash, basename, pwd, hostname, cut, grep,
+  egrep, date...
+
 Installation
 ============
 You'll need OCaml and omake to compile gibak (it has been tested with OCaml
