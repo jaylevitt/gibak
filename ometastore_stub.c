@@ -17,12 +17,14 @@
 #define LLISTXATTR(f, buf, len) (llistxattr(f, buf, len))
 #define LGETXATTR(f, nam, buf, len) (lgetxattr(f, nam, buf, len))
 #define LSETXATTR(f, nam, v, len) lsetxattr(f, nam, v, len, 0)
+#define LREMOVEXATTR(f, nam) lremovexattr(f, nam)
 
 #elif defined(HAVE_OSX_XATTR)
 
 #define LLISTXATTR(f, buf, len) (listxattr(f, buf, len, XATTR_NOFOLLOW))
 #define LGETXATTR(f, nam, buf, len) (getxattr(f, nam, buf, len, 0, XATTR_NOFOLLOW))
 #define LSETXATTR(f, nam, v, len) (setxattr(f, nam, v, len, 0, XATTR_NOFOLLOW))
+#define LREMOVEXATTR(f, nam) removexattr(f, nam, XATTR_NOFOLLOW)
 
 #endif
 
@@ -112,6 +114,16 @@ CAMLprim value perform_lsetxattr(value file, value name, value val)
  CAMLreturn(Val_unit);
 }
 
+CAMLprim value perform_lremovexattr(value file, value name)
+{
+ CAMLparam2(file, name);
+
+ if(LREMOVEXATTR(String_val(file), String_val(name)))
+     caml_failwith("lremovexattr");
+
+ CAMLreturn(Val_unit);
+}
+
 
 #else
 
@@ -132,6 +144,13 @@ CAMLprim value perform_lsetxattr(value file, value name, value val)
  CAMLparam3(file, name, val);
 
  caml_failwith("lsetxattr");
+}
+
+CAMLprim value perform_lremovexattr(value file, value name)
+{
+ CAMLparam2(file, name);
+
+ caml_failwith("lremovexattr");
 }
 
 #endif

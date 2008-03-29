@@ -31,6 +31,7 @@ external utime : string -> int -> unit = "perform_utime"
 external llistxattr : string -> string list = "perform_llistxattr"
 external lgetxattr : string -> string -> string = "perform_lgetxattr"
 external lsetxattr : string -> string -> string -> unit = "perform_lsetxattr"
+external lremovexattr : string -> string -> unit = "perform_lremovexattr"
 
 let user_name = memoized (fun uid -> (getpwuid uid).pw_name)
 let group_name = memoized (fun gid -> (getgrgid gid).gr_name)
@@ -218,10 +219,11 @@ let fix_xattrs src dst =
   let to_map l =
     List.fold_left (fun m e -> SMap.add e.name e.value m) SMap.empty l in
   let set_attr name value =
-    out "%s, " name;
-    try
-      lsetxattr src.path name value
-    with Failure _ -> () (* lsetxattr error ignored *) in
+    out "+%S, " name;
+    try lsetxattr src.path name value with Failure _ -> () in
+  let del_attr name =
+    out "-%S, " name;
+    try lremovexattr src.path name with Failure _ -> () in
   let src = to_map src.xattrs in
   let dst = to_map dst.xattrs in
     SMap.iter
@@ -230,7 +232,8 @@ let fix_xattrs src dst =
            if SMap.find name dst <> SMap.find name src then set_attr name value
          with Not_found -> set_attr name value)
       dst;
-    (* TODO: delete no-longer-existent attributes? *)
+    (* remove deleted xattrs *)
+    SMap.iter (fun name _ -> if not (SMap.mem name dst) then del_attr name) src;
     out ")\n"
 
 let apply_change = function
