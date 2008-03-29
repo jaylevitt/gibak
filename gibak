@@ -98,11 +98,11 @@ function init() {
     chmod -R u+rwX,go-rwx .git
 
     # Add a gitweb description
-    echo "git-home-history of $HOME on $(hostname -f)" > .git/description
+    echo "git-home-history of $HOME on $(hostname)" > .git/description
 
     # Make sure there is a 'name' field in config... some git scripts
     # complain if not
-    if test "$(getent passwd | grep $USER | cut -d: -f5)" = ""; then
+    if test "$(getent passwd 2>&1 | grep $USER | cut -d: -f5)" = ""; then
 	  git config user.name "$USER"
     fi
 
@@ -233,7 +233,7 @@ function commit() {
     __handle_git_repositories
     test -n "$what" || modifier="-a"
     echo "Committing." >&2
-    git-commit $modifier -m"Committed on $( date -R )" -- $@
+    git-commit $modifier -m"Committed on $( date +"%a, %d %b %Y %H:%M:%S %z" )" -- $@
     echo "Optimizing and compacting repository (might take a while)." >&2
     git-gc --auto || git-gc # the --auto is on newer versions
 }
@@ -279,7 +279,7 @@ function rm_older_than() {
 
     # Make sure we are able to tell in a commit that on this
     # date, a cleanup was made
-    local removal_date=$( date -R )
+    local removal_date=$( date +"%a, %d %b %Y %H:%M:%S %z" )
     local witness_file=.git-home-history-last-removal
     local msg="Removed older than '$time_spec' on $removal_date"
     echo "$msg" > ${witness_file}
