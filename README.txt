@@ -17,11 +17,18 @@ fields.
 Installation
 ============
 You'll need OCaml and omake to compile gibak (it has been tested with OCaml
-3.10.1). Just type
+3.10.1).
+
+(1) Verify the compilation parameters in OMakefile. The defaults should work
+in most cases, but you might need to change a couple variables:
+* include paths for the caml headers, required in some OCaml setups
+* support for extended attributes. Tested on Linux and OSX.
+
+(2) run
 
  $ omake
 
-and copy the following executables to a directory in your path:
+(3) copy the following executables to a directory in your path:
 
   find-git-files
   find-git-repos
@@ -41,8 +48,6 @@ The normal workflow is:
                      # with  find-git-files  or  gibak ls-new-files
  $ gibak commit      # the first commit will be fairly slow, but the following
                      # ones will be very fast
-                     # it takes half an hour to import 2GB worth of data
-                     # (200000 files)
 
 .... later ....
 
