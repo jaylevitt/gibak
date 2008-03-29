@@ -30,6 +30,7 @@ type whatsnew = Added of entry | Deleted of entry | Diff of entry * entry
 external utime : string -> int -> unit = "perform_utime"
 external llistxattr : string -> string list = "perform_llistxattr"
 external lgetxattr : string -> string -> string = "perform_lgetxattr"
+external lsetxattr : string -> string -> string -> unit = "perform_lsetxattr"
 
 let user_name = memoized (fun uid -> (getpwuid uid).pw_name)
 let group_name = memoized (fun gid -> (getgrgid gid).gr_name)
@@ -219,15 +220,16 @@ let fix_xattrs src dst =
     List.fold_left (fun m e -> SMap.add e.name e.value m) SMap.empty l in
   let set_attr name value =
     out "%s, " name;
-    () (* TODO: lsetxattr *) in
+    try
+      lsetxattr src.path name value
+    with Failure _ -> () (* lsetxattr error ignored *) in
   let src = to_map src.xattrs in
   let dst = to_map dst.xattrs in
     SMap.iter
       (fun name value ->
          try
            if SMap.find name dst <> SMap.find name src then set_attr name value
-         with Not_found -> set_attr name value
-           | Failure _ -> () (* error in lsetxattr, ignored *))
+         with Not_found -> set_attr name value)
       dst;
     (* TODO: delete no-longer-existent attributes? *)
     out ")\n"

@@ -14,13 +14,15 @@
 
 #ifdef HAVE_LINUX_XATTR
 
-#define LLISTXATTR(f, buf, s) (llistxattr(f, buf, s))
-#define LGETXATTR(f, nam, buf, s) (lgetxattr(f, nam, buf, s))
+#define LLISTXATTR(f, buf, len) (llistxattr(f, buf, len))
+#define LGETXATTR(f, nam, buf, len) (lgetxattr(f, nam, buf, len))
+#define LSETXATTR(f, nam, v, len) lsetxattr(f, nam, v, len, 0)
 
 #elif defined(HAVE_OSX_XATTR)
 
-#define LLISTXATTR(f, buf, s) (listxattr(f, buf, s, XATTR_NOFOLLOW))
-#define LGETXATTR(f, nam, buf, s) (getxattr(f, nam, buf, s, 0, XATTR_NOFOLLOW))
+#define LLISTXATTR(f, buf, len) (listxattr(f, buf, len, XATTR_NOFOLLOW))
+#define LGETXATTR(f, nam, buf, len) (getxattr(f, nam, buf, len, 0, XATTR_NOFOLLOW))
+#define LSETXATTR(f, nam, v, len) (setxattr(f, nam, v, len, 0, XATTR_NOFOLLOW))
 
 #endif
 
@@ -100,6 +102,17 @@ CAMLprim value perform_lgetxattr(value file, value name)
  CAMLreturn(ret);
 }
 
+CAMLprim value perform_lsetxattr(value file, value name, value val)
+{
+ CAMLparam3(file, name, val);
+
+ if(LSETXATTR(String_val(file), String_val(name), String_val(val), string_length(val)))
+     caml_failwith("lsetxattr");
+
+ CAMLreturn(Val_unit);
+}
+
+
 #else
 
 CAMLprim value perform_llistxattr(value file)
@@ -112,6 +125,13 @@ CAMLprim value perform_lgetxattr(value file, value name)
  CAMLparam2(file, name);
 
  caml_failwith("lgetxattr");
+}
+
+CAMLprim value perform_lsetxattr(value file, value name, value val)
+{
+ CAMLparam3(file, name, val);
+
+ caml_failwith("lsetxattr");
 }
 
 #endif
