@@ -47,12 +47,10 @@ let entry_of_path path =
   let s = lstat path in
   let user = user_name s.st_uid in
   let group = group_name s.st_gid in
-  let xattrs = match !use_xattrs with
-      false -> []
-    | true ->
-        List.map
-          (fun attr -> { name = attr; value = lgetxattr path attr; })
-          (List.sort compare (llistxattr path))
+  let xattrs =
+    List.map
+      (fun attr -> { name = attr; value = lgetxattr path attr; })
+      (List.sort compare (llistxattr path))
   in
     { path = path; owner = user; group = group; mode = s.st_perm;
       kind = s.st_kind; mtime = s.st_mtime; xattrs = xattrs }
@@ -194,7 +192,8 @@ let print_changes ?(sorted=false) l =
              test "kind" (fun x -> x.kind) ++
              test "mtime"
                (if !use_mtime then (fun x -> x.mtime) else (fun _ -> 0.)) ++
-             test "xattr" (fun x -> x.xattrs)
+             test "xattr"
+               (if !use_xattrs then (fun x -> x.xattrs) else (fun _ -> []))
            in match List.rev diffs with
                [] -> ()
              | l -> printf "Changed %s: %s\n" e1.path (String.concat " " l))
