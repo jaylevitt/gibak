@@ -215,7 +215,7 @@ function commit() {
     local modifier=
 
     echo "Committing to repository, this may take a long time" >&2
-    if git-ls-files -m -o --exclude-standard | egrep -q '(^|/).gitignore$'; then
+    if git-ls-files --modified --others --exclude-standard | egrep -q '(^|/).gitignore$'; then
 	echo "Some .gitignore added or modified, determining newly ignored files." >&2
 	# I don't like myself for using such a sloppy way of
 	# removing previously-tracked newly-ignored files...
@@ -433,21 +433,21 @@ case "$1" in
 	;;
     ls-changed-files)
         echo "These files have been modified:" >&2
-        git-ls-files --exclude-standard -m
+        git-ls-files --exclude-standard --modified
 	echo "Use '$SCRIPT_NAME commit' to store them" >&2
         ;;
     ls-new-files)
 	echo "These files are not yet stored:" >&2
-	git-ls-files --exclude-standard -o
+	git-ls-files --exclude-standard --others
 	echo "Use '$SCRIPT_NAME commit' to store them" >&2
 	;;
     ls-ignored-files)
 	echo "These files are ignored:" >&2
-	git-ls-files --exclude-standard -i -o --directory
+	git-ls-files --exclude-standard --ignored --others --directory
 	;;
     ls-newly-ignored-files)
         echo "These files have been ignored since the last commit:" >&2
-	if git-ls-files -m -o --exclude-standard | egrep -q '(^|/).gitignore$'; then
+	if git-ls-files --modified --others --exclude-standard | egrep -q '(^|/).gitignore$'; then
 	    ometastore -d -i | sort
 	fi
 	;;
