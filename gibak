@@ -17,6 +17,7 @@
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
+version="0.3.0"
 
 if ! which git &>/dev/null; then
     echo "Please Git" >&2
@@ -472,6 +473,10 @@ case "$1" in
 		echo "Could not find manpage" >&2
 	    fi
 	fi
+	;;
+    --version)
+	echo "gibak version $version"
+	exit 0
 	;;
     *)
 	echo "usage: $SCRIPT_NAME <action>"

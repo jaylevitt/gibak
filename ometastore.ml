@@ -11,7 +11,7 @@ let verbose = ref false
 let use_mtime = ref false
 let use_xattrs = ref false
 let magic = "Ometastore"
-let version = "1.0.0"
+let version = "1.0.1"
 
 type xattr = { name : string; value : string }
 
@@ -268,7 +268,9 @@ module Allentries = Entries(Folddir.Make(Folddir.Ignore_none))
 module Gitignored = Entries(Folddir.Make(Folddir.Gitignore))
 
 let main () =
-  let usage = "Usage: ometastore <options>" in
+  let usage =
+    "Usage: ometastore COMMAND [options]\n\
+     where COMMAND is -c, -d, -s or -a.\n" in
   let mode = ref `Unset in
   let file = ref ".ometastore" in
   let path = ref "." in
@@ -277,19 +279,22 @@ let main () =
   let sorted = ref false in
   let specs = [
        "-c", Arg.Unit (fun () -> mode := `Compare),
-       "Show all differences between stored and real metadata";
+       "show all differences between stored and real metadata";
        "-d", Arg.Unit (fun () -> mode := `Show_deleted),
-       "Show only files deleted or newly ignored.";
-       "-s", Arg.Unit (fun () -> mode := `Save), "Save metadata";
-       "-a", Arg.Unit (fun () -> mode := `Apply), "Apply current metadata";
+       "show only files deleted or newly ignored";
+       "-s", Arg.Unit (fun () -> mode := `Save), "save metadata";
+       "-a", Arg.Unit (fun () -> mode := `Apply), "apply current metadata";
        "-i", Arg.Unit (fun () -> get_entries := Gitignored.get_entries),
-       "Mimic git semantics (honor .gitignore, don't scan git submodules)";
-       "-m", Arg.Set use_mtime, "Consider mtime for diff and apply";
-       "-x", Arg.Set use_xattrs, "Consider extended attributes for diff and apply";
-       "-z", Arg.Unit (fun () -> sep := "\000"), "Use \\0 to separate filenames.";
-       "--sort", Arg.Set sorted, "Sort output by filename.";
-       "-v", Arg.Set verbose, "Verbose mode";
-       "--debug", Arg.Set debug, "Debug mode"
+       "mimic git semantics (honor .gitignore, don't scan git submodules)";
+       "-m", Arg.Set use_mtime, "consider mtime for diff and apply";
+       "-x", Arg.Set use_xattrs, "consider extended attributes for diff and apply";
+       "-z", Arg.Unit (fun () -> sep := "\000"), "use \\0 to separate filenames";
+       "--sort", Arg.Set sorted, "sort output by filename";
+       "-v", Arg.Set verbose, "verbose mode";
+       "--debug", Arg.Set debug, "debug mode";
+       "--version",
+         Arg.Unit (fun () -> printf "ometastore version %s\n" version; exit 0),
+         "show version info";
      ]
   in Arg.parse specs ignore usage;
      match !mode with
