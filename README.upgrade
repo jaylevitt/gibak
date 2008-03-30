@@ -1,0 +1,9 @@
+This file explains how to upgrade when you already have a gibak backup.
+
+Updating from the pre-release version
+=====================================
+
+(1) Install the latest version as described in README.txt.
+(2) If you have compiled ometastore with support for extended attributes and
+want to save/restore the xattrs, edit ~/.git/pre-commit and post-checkout and
+add the "-x" option to the call to ometastore.
