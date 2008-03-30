@@ -116,14 +116,14 @@ function init() {
     cat << EOF > .git/hooks/pre-commit
 #!/bin/sh
 
-ometastore -s -i --sort
+ometastore -x -s -i --sort
 git add -f .ometastore
 EOF
 
     cat << EOF > .git/hooks/post-checkout
 #!/bin/sh
 
-ometastore -a -i
+ometastore -x -a -i
 EOF
 
     test -e .gitignore || cat << EOF > .gitignore
