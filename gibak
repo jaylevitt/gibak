@@ -124,7 +124,7 @@ EOF
     cat << EOF > .git/hooks/post-checkout
 #!/bin/sh
 
-ometastore -x -a -i
+ometastore -v -x -a -i
 EOF
 
     test -e .gitignore || cat << EOF > .gitignore
