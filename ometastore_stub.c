@@ -79,7 +79,7 @@ CAMLprim value perform_llistxattr(value file)
      Store_field(l, 1, prev);
      prev = l;
      while(*p++) /* skip */ i++;
-     ++p; ++i;
+     ++i;
  }
 
  free(porig);
