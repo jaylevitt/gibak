@@ -33,8 +33,25 @@ external lgetxattr : string -> string -> string = "perform_lgetxattr"
 external lsetxattr : string -> string -> string -> unit = "perform_lsetxattr"
 external lremovexattr : string -> string -> unit = "perform_lremovexattr"
 
-let user_name = memoized (fun uid -> (getpwuid uid).pw_name)
-let group_name = memoized (fun gid -> (getgrgid gid).gr_name)
+let user_name =
+  memoized
+    (fun uid ->
+       try
+         (getpwuid uid).pw_name
+       with Not_found ->
+         try
+           (getpwuid (getuid ())).pw_name
+         with Not_found -> Sys.getenv("USER"))
+
+let group_name =
+  memoized
+    (fun gid ->
+       try
+         (getgrgid gid).gr_name
+       with Not_found ->
+         try
+           (getgrgid (getgid ())).gr_name
+         with Not_found -> Sys.getenv("USER"))
 
 let int_of_file_kind = function
     S_REG -> 0 | S_DIR -> 1 | S_CHR -> 2 | S_BLK -> 3 | S_LNK -> 4 | S_FIFO -> 5
