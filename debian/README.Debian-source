@@ -1,4 +1,7 @@
 To get debian/control, which you need to build anything, do:
 DEB_AUTO_UPDATE_DEBIAN_CONTROL=yes debian/rules debian/control
 
+When building from a git checkout, be sure to pass “ -i -I ” to the
+higher-level tool you use among debuild, dpkg-buildpackage or dpkg-source.
+
 
