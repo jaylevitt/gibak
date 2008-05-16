@@ -1,0 +1,4 @@
+To get debian/control, which you need to build anything, do:
+DEB_AUTO_UPDATE_DEBIAN_CONTROL=yes debian/rules debian/control
+
+
