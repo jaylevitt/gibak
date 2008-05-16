@@ -5,3 +5,6 @@ include /usr/share/cdbs/1/class/ocaml.mk
 build/gibak::
 	omake || omake # hack; doesn't work first time
 
+clean::
+	omake clean
+
