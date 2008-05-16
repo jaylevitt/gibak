@@ -11,17 +11,32 @@ Conflicts: gibak-byte
 Replaces: gibak-byte
 Architecture: @OCamlNativeArchs@
 Depends: ${shlibs:Depends}, ${misc:Depends}, git-core (>= 1.5.4.2), rsync (>= 2.6.4), bash (>= 3.2)
-Description: git backup tool
- Few paragraphs
+Description: backup tool based on Git
+ Since gibak builds upon the infrastructure offered by Git, it shares its main
+ strengths:
+ * speed: recovering your data is faster that cp -a...
+ * full revision history
+ * space-efficient data store, with file compression and textual/binary deltas
+ * efficient transport protocol to replicate the backup (faster than rsync)
  .
- Few more
+ gibak uses Git's hook system to save and restore the information Git doesn't
+ track itself such as permissions, empty directories and optionally mtime
+ fields.
 
 Package: gibak-byte
 Conflicts: gibak
 Replaces: gibak
 Architecture: all
 Depends: ocaml-base-nox-${F:OCamlABI}, ${shlibs:Depends}, ${misc:Depends}, git-core (>= 1.5.4.2), rsync (>= 2.6.4), bash (>= 3.2)
-Description: git backup tool
- Few paragraphs
+Description: backup tool based on Git
+ Since gibak builds upon the infrastructure offered by Git, it shares its main
+ strengths:
+ * speed: recovering your data is faster that cp -a...
+ * full revision history
+ * space-efficient data store, with file compression and textual/binary deltas
+ * efficient transport protocol to replicate the backup (faster than rsync)
  .
- Few more
+ gibak uses Git's hook system to save and restore the information Git doesn't
+ track itself such as permissions, empty directories and optionally mtime
+ fields.
+
