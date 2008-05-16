@@ -39,4 +39,7 @@ Description: backup tool based on Git
  gibak uses Git's hook system to save and restore the information Git doesn't
  track itself such as permissions, empty directories and optionally mtime
  fields.
+ .
+ This package contains the arch independent bytecode version. Consider using
+ the faster nativecode version if it is available on your arch.
 
