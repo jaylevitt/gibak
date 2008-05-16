@@ -2,8 +2,20 @@
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/ocaml.mk
 
+ML_PROGS = ometastore find-git-files find-git-repos
+ML_PROG_EXT = $(if OCAML_HAVE_OCAMLOPT,.opt,.run)
+ML_PROGS_ALL = $(ML_PROGS) $(ML_PROGS:%=%$(ML_PROG_EXT))
+
 build/gibak::
-	omake || omake # hack; doesn't work first time
+	# Always necessary somehow
+	omake NATIVE_ENABLED=false BYTE_ENABLED=true
+ifeq ($(OCAML_HAVE_OCAMLOPT),yes)
+	omake NATIVE_ENABLED=true BYTE_ENABLED=false
+endif
+
+install/gibak::
+	install -d "$(DEB_DESTDIR)/usr/bin"
+	install -t "$(DEB_DESTDIR)/usr/bin" $(ML_PROGS_ALL)
 
 clean::
 	omake clean
