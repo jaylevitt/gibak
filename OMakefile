@@ -15,7 +15,6 @@
 
 # === No change should be needed after this line. ===
 
-BYTE_ENABLED = true
 OCAMLFLAGS += -dtypes
 OCAMLOPTFLAGS += -inline 10 -S
 
