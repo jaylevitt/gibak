@@ -1,0 +1,2 @@
+This package does not have xattrs support, as I did not want to patch
+upstream's makefiles just yet.
