@@ -1,14 +1,15 @@
 Source: gibak
+Section: utils
 Priority: optional
 Maintainer: Gabriel de Perthuis <g2p.code@gmail.com>
-Build-Depends: cdbs, ocaml-findlib, ocaml-nox (>= 3.10.0), omake
+Build-Depends: debhelper, cdbs, ocaml-findlib, ocaml-nox (>= 3.10.0), omake
+Standards-Version: 3.7.3
 
 Package: gibak
 Architecture: any
-Depends: ocaml-base-nox-${F:OCamlABI}, ${shlibs:Depends}, ${misc:Depends}, git, rsync, bash
+Depends: ocaml-base-nox-${F:OCamlABI}, ${shlibs:Depends}, ${misc:Depends}, git-core (>= 1.5.4.2), rsync (>= 2.6.4), bash (>= 3.2)
+Homepage: http://eigenclass.org/repos/gitweb?p=gibak.git;a=summary
 Description: git backup tool
  Few paragraphs
  .
  Few more
- .
- Homepage: http://eigenclass.org/repos/gitweb?p=gibak.git;a=summary
