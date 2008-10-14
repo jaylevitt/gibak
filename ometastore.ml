@@ -5,6 +5,7 @@ open Printf
 open Unix
 open Folddir
 open Util
+open FileUtil.StrUtil
 
 let debug = ref false
 let verbose = ref false
@@ -256,7 +257,8 @@ let fix_xattrs src dst =
 let apply_change = function
   | Added e when e.kind = S_DIR ->
       out "%s: mkdir (mode %04o)\n" e.path e.mode;
-      Unix.mkdir e.path e.mode
+      mkdir ~parent:true e.path;
+      chmod e.path e.mode
   | Deleted _ | Added _ -> ()
   | Diff (e1, e2) ->
       if e1.owner <> e2.owner || e1.group <> e2.group then fix_usergroup e2;

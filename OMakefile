@@ -13,6 +13,12 @@
 # older version of glibc, to link against libattr1.
 #OCAMLFLAGS += -cclib -lattr
 
+# Use the fileutils library for a recursive mkdir
+USE_OCAMLFIND = TRUE
+OCAMLPACKS[] =
+    fileutils
+    unix
+
 # === No change should be needed after this line. ===
 
 OCAMLFLAGS += -dtypes
@@ -21,7 +27,7 @@ OCAMLOPTFLAGS += -inline 10 -S
 StaticCLibrary(ometastore_stub, ometastore_stub)
 
 OCAML_CLIBS += ometastore_stub
-OCAML_OTHER_LIBS += unix str
+OCAML_OTHER_LIBS += str
 
 OCamlProgram(ometastore, folddir util ometastore)
 OCamlProgram(find-git-repos, folddir util find-git-repos)
