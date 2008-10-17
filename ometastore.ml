@@ -229,8 +229,10 @@ let out s = if !verbose then Printf.fprintf Pervasives.stdout s
             else Printf.ifprintf Pervasives.stdout s
 
 let fix_usergroup e =
-  out "%s: set owner/group to %S %S\n" e.path e.owner e.group;
-  chown e.path (getpwnam e.owner).pw_uid (getgrnam e.group).gr_gid
+  try
+    out "%s: set owner/group to %S %S\n" e.path e.owner e.group;
+    chown e.path (getpwnam e.owner).pw_uid (getgrnam e.group).gr_gid;
+  with Unix_error _ -> ( out "chown failed: %s\n" e.path )
 
 let fix_xattrs src dst =
   out "%s: fixing xattrs (" src.path;
