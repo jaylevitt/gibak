@@ -260,7 +260,8 @@ let apply_change = function
   | Added e when e.kind = S_DIR ->
       out "%s: mkdir (mode %04o)\n" e.path e.mode;
       mkdir ~parent:true e.path;
-      chmod e.path e.mode
+      chmod e.path e.mode;
+      fix_usergroup e
   | Deleted _ | Added _ -> ()
   | Diff (e1, e2) ->
       if e1.owner <> e2.owner || e1.group <> e2.group then fix_usergroup e2;
