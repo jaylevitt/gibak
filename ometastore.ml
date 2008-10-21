@@ -279,12 +279,14 @@ let apply_change = function
 
 let apply_changes path l =
   List.iter apply_change
-    (List.map
-       (function
-            Added _ | Deleted _ as x -> x
-          | Diff (e1, e2) -> Diff ({ e1 with path = join path e1.path},
-                                   { e2 with path = join path e2.path}))
-       l)
+    (List.rev
+        (List.rev_map
+           (function
+                Added _ | Deleted _ as x -> x
+              | Diff (e1, e2) -> Diff ({ e1 with path = join path e1.path},
+                                       { e2 with path = join path e2.path}))
+           l)
+    )
 
 module Allentries = Entries(Folddir.Make(Folddir.Ignore_none))
 module Gitignored = Entries(Folddir.Make(Folddir.Gitignore))
