@@ -25,16 +25,13 @@ if ! which git &>/dev/null; then
     exit 1
 fi
 
-#git libexec folder since the git-* commands are no longer in PATH
-GITDIR="$(git --exec-path)"
-
 # Autotools defines
 MANDIR="/usr/local/share/man"
 
 SCRIPT_NAME=$(basename $0)
 ORIG_DIR="$( pwd )"
 # Remember that all actions here are to be made in $HOME dir!
-cd ~
+cd $HOME
 
 # We don't want users complaining.  by default, top permissions
 # "security"
@@ -64,8 +61,7 @@ function __abort_on_not_initialized() {
 	exit 1
     fi
     # further tests
-
-    source $GITDIR/git-sh-setup
+    source "$(git --exec-path)/git-sh-setup"
     require_work_tree
 }
 
@@ -99,7 +95,7 @@ function init() {
     __abort_on_initialized
 
     # I know it's the default... but let's be explicit!
-    git --shared=umask init
+    git init --shared=umask
     chmod -R u+rwX,go-rwx .git
 
     # Add a gitweb description
@@ -121,14 +117,18 @@ function init() {
     cat << EOF > .git/hooks/pre-commit
 #!/bin/sh
 
-ometastore -x -s -i --sort
-git add -f .ometastore
+if [[ "\$SKIP_OMETASTORE" == "" ]]; then
+    ometastore -x -s -i --sort
+    git add -f .ometastore
+fi
 EOF
 
     cat << EOF > .git/hooks/post-checkout
 #!/bin/sh
 
-ometastore -v -x -a -i
+if [[ "\$SKIP_OMETASTORE" == "" ]]; then
+    ometastore -v -x -a -i
+fi
 EOF
 
     test -e .gitignore || cat << EOF > .gitignore
