@@ -233,7 +233,7 @@ function commit() {
 	xargs -0 git rm --cached -r -f --ignore-unmatch -- 2>/dev/null
     fi
     echo "Adding new and modified files." >&2
-    git add -v --ignore-errors
+    git add -v --ignore-errors .
     __handle_git_repositories
     test -n "$what" || modifier="-a"
     echo "Committing." >&2
