@@ -1,0 +1,20 @@
+
+2008-11-29 10:00	Jay Levitt		<jay@jay.fm>
+	* Incorporate Eric Pollmann's suggestions from 2008-04-08 at
+	  http://eigenclass.org/hiki/gibak-0.3.0.  These make 
+	  ometastore tolerant of files it can't access, and add
+	  better reporting when it encounters unknown problems.
+
+	* Store xattr strings with a 4-byte length, not a 2-byte length.  
+	  This fixes errors like "Fatal error: exception Invalid_argument 
+	  ("String.sub")" when files had long xattrs - e.g., Mac resource
+	  forks on OS X HFS files.
+
+    	  NOTE: This is a breaking change to the format of .ometastore; I
+ 	  don't know OCAML, so I'm not confident enough to add a data 
+	  version number to the file.  It's not a bad idea, though.
+
+2008-11-29 10:00	Jay Levitt		<jay@jay.fm>
+
+	* Might as well start a changelog. 
+

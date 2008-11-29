@@ -5,6 +5,8 @@
 #include <caml/memory.h>
 #include <caml/fail.h>
 #include <fnmatch.h>
+#include <stdio.h>
+#include <sys/errno.h>
 #include <sys/types.h>
 #include <utime.h>
 
@@ -42,8 +44,8 @@ CAMLprim value perform_utime(value file, value time)
 {
   struct utimbuf tbuf;
 
-	tbuf.actime = Int_val(time);
-	tbuf.modtime = Int_val(time);
+	tbuf.actime = Nativeint_val(time);
+	tbuf.modtime = Nativeint_val(time);
 	if(utime(String_val(file), &tbuf))
 		caml_failwith("utime");
 
@@ -60,10 +62,22 @@ CAMLprim value perform_llistxattr(value file)
  char *p, *porig;
 
  siz = LLISTXATTR(String_val(file), NULL, 0);
- if(siz == 0)
+ if (siz == 0 || errno == EPERM || errno == EACCES)
      CAMLreturn(Val_int(0));
- if(siz < 0)
+ if(siz < 0) {   
+     printf("Running llistxattr on %s failed, error %i\n", file, errno);
+     if (errno == ENOTSUP) printf("Not supported on file system.\n");
+     if (errno == ERANGE) printf("Namebuf too small.\n");    
+     if (errno == EPERM) printf("Not supported on file.\n"); 
+     if (errno == ENOTDIR) printf("Path not a directory.\n");
+     if (errno == ENAMETOOLONG) printf("Name too long.\n");
+     if (errno == EACCES) printf("Permission denied.\n");
+     if (errno == ELOOP) printf("Too many symbolic links.  Loop?\n");
+     if (errno == EFAULT) printf("Inavlid address.\n");
+     if (errno == EIO) printf("I/O error occured.\n"); 
+     if (errno == EINVAL) printf("Options invalid.\n");
      caml_failwith("llistxattr");
+}
 
  porig = p = malloc(siz);
  siz = LLISTXATTR(String_val(file), p, siz);
