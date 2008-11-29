@@ -12,7 +12,7 @@ let verbose = ref false
 let use_mtime = ref false
 let use_xattrs = ref false
 let magic = "Ometastore"
-let version = "1.0.1"
+let version = "1.1.0"
 
 type xattr = { name : string; value : string }
 
