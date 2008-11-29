@@ -28,8 +28,8 @@ fi
 # Autotools defines
 MANDIR="/usr/local/share/man"
 
-SCRIPT_NAME=$(basename $0)
-ORIG_DIR="$( pwd )"
+SCRIPT_NAME="${var##*/}"
+ORIG_DIR="$PWD"
 # Remember that all actions here are to be made in $HOME dir!
 cd $HOME
 
@@ -78,7 +78,7 @@ function __handle_git_repositories() {
     echo "Managing submodules." >&2
     rm -f .gitmodules
     local base=.git/git-repositories
-    mkdir -p $base
+    mkdir -p "$base"
     find-git-repos -i -z | while read -d $'\0' rep; do
 	echo "  submodule $rep" >&2
 	rsync -a -F --relative --delete-excluded --delete-after \
@@ -99,7 +99,7 @@ function init() {
     chmod -R u+rwX,go-rwx .git
 
     # Add a gitweb description
-    echo "git-home-history of $HOME on $(hostname)" > .git/description
+    echo "git-home-history of $HOME on $HOSTNAME" > .git/description
 
     # Make sure there is a 'name' field in config... some git scripts
     # complain if not
@@ -216,7 +216,7 @@ function rm_all() {
 
 function commit() {
     __abort_on_not_initialized
-    local what=$@
+    local what=("$@")
     local modifier=
 
     echo "Committing to repository, this may take a long time" >&2
@@ -237,7 +237,7 @@ function commit() {
     __handle_git_repositories
     test -n "$what" || modifier="-a"
     echo "Committing." >&2
-    git commit $modifier -m"Committed on $( date +"%a, %d %b %Y %H:%M:%S %z" )" -- $@
+    git commit $modifier -m"Committed on $( date +"%a, %d %b %Y %H:%M:%S %z" )" -- "$@"
     echo "Optimizing and compacting repository (might take a while)." >&2
     git gc --auto || git gc # the --auto is on newer versions
 }
@@ -245,7 +245,7 @@ function commit() {
 
 function rm_older_than() {
     __abort_on_not_initialized
-    local time_spec=$@
+    local time_spec="$@"
 
     if ! which git filter-branch &>/dev/null; then
 	echo "Please install a recent version of Git" >&2
@@ -286,9 +286,9 @@ function rm_older_than() {
     local removal_date=$( date +"%a, %d %b %Y %H:%M:%S %z" )
     local witness_file=.git-home-history-last-removal
     local msg="Removed older than '$time_spec' on $removal_date"
-    echo "$msg" > ${witness_file}
-    git add $witness_file
-    git commit -m"$msg" $witness_file
+    echo "$msg" > "${witness_file}"
+    git add "$witness_file"
+    git commit -m"$msg" "$witness_file"
 
     # Finally make sure everything is ok, and remove old stuff
     git gc --prune
@@ -302,7 +302,7 @@ function show() {
     shift
     shift # 'as'
     shift # 'of'
-    local time_spec=$@
+    local time_spec="$@"
 
     echo "Showing: $HOME/$file_to_restore" >&2
     GIT_PAGER=cat git show "HEAD@{'$time_spec'}:$file_to_restore"
@@ -365,11 +365,11 @@ function ls_stored_files() {
 function eat() {
     __abort_on_not_initialized
 
-    git add -v -- $@ || die "Could not add '$@' to the history store"
-    commit $@
-    git rm -r -f -- $@ || die "Problem removing '$@'"
-    rm -rf -- $@ # some empty dirs may remain. clean'em up
-    commit $@
+    git add -v -- "$@" || die "Could not add '$@' to the history store"
+    commit "$@"
+    git rm -r -f -- "$@" || die "Problem removing '$@'"
+    rm -rf -- "$@" # some empty dirs may remain. clean'em up
+    commit "$@"
 }
 
 case "$1" in
@@ -385,7 +385,7 @@ case "$1" in
     archive-to)
 	# output can be stdout, using '-' or a file
 	shift
-	archive_to $@
+	archive_to "$@"
 	;;
     extract-archive-to)
 	# output can only be a file
@@ -404,7 +404,7 @@ case "$1" in
 	    echo "e.g. $SCRIPT_NAME show 'myfile.txt' as of 2 days ago" >&2
 	    exit 1
 	fi
-	show $@
+	show "$@"
 	;;
     commit)
 	commit
@@ -421,7 +421,7 @@ case "$1" in
 	    echo "e.g. $SCRIPT_NAME eat 'myfile.txt'" >&2
 	    exit 1
 	fi
-	eat $@
+	eat "$@"
 	;;
     rm-older-than)
 	shift
@@ -430,7 +430,7 @@ case "$1" in
 	    echo "e.g. '1 year ago' or '1979-02-26 18:30:00'" >&2
 	    exit 1
 	fi
-	rm_older_than $@
+	rm_older_than "$@"
 	;;
     rm-all)
 	rm_all
@@ -457,7 +457,7 @@ case "$1" in
 	;;
     ls-stored-files)
 	shift
-	ls_stored_files $@
+	ls_stored_files "$@"
 	;;
     --help|-h|help)
 	manfile="${SCRIPT_NAME}.1"

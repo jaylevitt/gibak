@@ -1,6 +1,15 @@
 
 2008-11-29 10:00	Jay Levitt		<jay@jay.fm>
 
+	* Incorporated many of lhunath's suggestions from 2008-07-24 at
+	  http://eigenclass.org/hiki/gibak-backup-system-introduction to
+	  make the gibak script more robust about spaces/quoting.  I am
+	  not a bash expert, and there are no unit tests, so I wasn't 
+	  comfortable making some of the more involved changes
+	  (e.g. changing test to [[) on my own.  I'm also not sure if
+	  we actually rely on some of the side effects of unquoted $@,
+	  but time will tell.
+	
 	* Change perform_utime to use Nativeint (32-bit) instead of
 	  int (31-bit); this fixes the "timestamp set to 1940" problem.
 
