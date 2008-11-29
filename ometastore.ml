@@ -102,11 +102,11 @@ let read_int is bytes =
   !r
 
 let write_xstring os s =
-  write_int os 2 (String.length s);
+  write_int os 4 (String.length s);
   output_string os s
 
 let read_xstring is =
-  let len = read_int is 2 in
+  let len = read_int is 4 in
   let s = String.create len in
     really_input is s 0 len;
     s
