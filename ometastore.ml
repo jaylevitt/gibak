@@ -28,7 +28,7 @@ type entry = {
 
 type whatsnew = Added of entry | Deleted of entry | Diff of entry * entry
 
-external utime : string -> int -> unit = "perform_utime"
+external utime : string -> nativeint -> unit = "perform_utime"
 external llistxattr : string -> string list = "perform_llistxattr"
 external lgetxattr : string -> string -> string = "perform_lgetxattr"
 external lsetxattr : string -> string -> string -> unit = "perform_lsetxattr"
@@ -273,7 +273,7 @@ let apply_change = function
         printf "%s: file type of changed (nothing done)\n" e1.path;
       if !use_mtime && e1.mtime <> e2.mtime then begin
         out "%s: mtime set to %.0f\n" e1.path e2.mtime;
-        utime e2.path (int_of_float e2.mtime)
+        utime e2.path (Nativeint.of_float e2.mtime)
       end;
       if !use_xattrs && e1.xattrs <> e2.xattrs then fix_xattrs e1 e2
 

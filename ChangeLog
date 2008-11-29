@@ -1,5 +1,9 @@
 
 2008-11-29 10:00	Jay Levitt		<jay@jay.fm>
+
+	* Change perform_utime to use Nativeint (32-bit) instead of
+	  int (31-bit); this fixes the "timestamp set to 1940" problem.
+
 	* Incorporate Eric Pollmann's suggestions from 2008-04-08 at
 	  http://eigenclass.org/hiki/gibak-0.3.0.  These make 
 	  ometastore tolerant of files it can't access, and add
