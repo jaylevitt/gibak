@@ -273,7 +273,9 @@ let apply_change = function
         printf "%s: file type of changed (nothing done)\n" e1.path;
       if !use_mtime && e1.mtime <> e2.mtime then begin
         out "%s: mtime set to %.0f\n" e1.path e2.mtime;
-        utime e2.path (Nativeint.of_float e2.mtime)
+        try 
+          utime e2.path (Nativeint.of_float e2.mtime)
+        with Failure _ -> ( out "utime failed: %s\n" e1.path )
       end;
       if !use_xattrs && e1.xattrs <> e2.xattrs then fix_xattrs e1 e2
 
