@@ -72,6 +72,9 @@ module Gitignore : IGNORE =
 struct
   open Printf
 
+  (* BUG: Patterns ending in "/" should match directories, but not files, per "man gitignore".  We fail to
+   * match them at all!  Leaving bug here for someone who knows OCaml to fix. *)
+
   type glob_type = Accept | Deny
   (* Simple: no wildcards, no slash
    * Simple_local: leading slash, otherwise no slashes, no wildcards
