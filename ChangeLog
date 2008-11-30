@@ -3,6 +3,8 @@
 
         * Store/restore mtime by default, and stop being verbose
         
+        * Update docs for multiple machines and known bugs
+        
 2008-11-29 19:00	Jay Levitt		<jay@jay.fm>
         * Log and continue after errors setting utime
         

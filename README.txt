@@ -23,10 +23,18 @@ gibak needs the following software at run-time:
 * common un*x userland: bash, basename, pwd, hostname, cut, grep,
   egrep, date...
 
+It needs the following software to compile:
+* ocaml (tested with version 3.10.1 and 3.10.2)
+* omake 
+* ocaml-fileutils
+* Findlib
+
+To install dependencies on Mac:
+* sudo port install git-core rsync caml-findlib omake
+* There is no port for ocaml-fileutils; you'll have to build it from source at http://le-gall.net/sylvain+violaine/download/ocaml-fileutils-latest.tar.gz
+
 Installation
 ============
-You'll need OCaml and omake to compile gibak (it has been tested with OCaml
-3.10.1).
 
 (1) Verify the compilation parameters in OMakefile. The defaults should work
 in most cases, but you might need to change a couple variables:
@@ -80,6 +88,83 @@ if you want your backup to reside in a different physical disk for resiliency
 against disk crashes. You can also clone the repository (probably using a bare
 repository --- without working tree --- for smaller space usage) and rsync
 .git/git-repositories to remote machines for further protection.
+
+Multiple machines
+-----------------
+You can clone your home directory on another machine, but it's a little 
+tricky: git won't let you clone into an existing directory.  Also, git won't
+copy the links in .git/hooks, which we use to update the metadata on each
+checkout.  Be sure that your UID and GUID are the same on both machines!
+
+So, to clone from your desktop to your laptop, do this on the laptop:
+
+1. Copy over gibak and ometastore to a directory in your path
+/Users/bob$ sudo -s
+/Users/bob# cd /usr/local/bin
+/usr/local/bin# scp desktop:/usr/local/bin/gibak .
+/usr/local/bin# scp desktop:/usr/local/bin/ometastore .
+
+1. Do the initial clone
+
+/usr/local/bin# cd ~bob
+/Users/bob# cd ..
+/Users# mkdir bob-temp
+/Users# git clone desktop:.git bob-temp
+/Users# ls bob-temp
+Documents/
+Library/
+...etc...
+/Users# mv bob-temp/* /Users/bob
+
+This will fail to move any directories that already exist in your 
+home directory.  I'm sure there's a nice, safe way around that, so someone
+should update these docs with that magic solution.
+
+2. Link the hooks and update your metadata:
+
+/Users# cd bob
+/Users/bob# ln -s .git-hooks/* .git/hooks
+/Users/bob# .git/hooks/post-checkout
+...any errors will be displayed...
+
+3. Recommit
+/Users/bob# exit
+/Users/bob$ gibak commit
+
+4. Push back to the desktop
+
+[THIS needs some serious documentation.  "git push" is NOT the way to go;
+you can't push into a repository with an active working copy!  That will
+leave desktop in a state where it incorrectly thinks it's out of date.
+
+I haven't figured this part out yet, but clues are at:
+
+http://hans.fugal.net/blog/2008/11/10/git-push-is-worse-than-worthless
+
+and
+
+http://git.or.cz/gitwiki/GitFaq#head-b96f48bc9c925074be9f95c0fce69bcece5f6e73
+
+...]
+
+5. Periodic synchronization
+
+When you want to sync the laptop, just:
+
+/Users/bob$ git pull
+...
+/Users/bob$ git that-magic-alternative-to-push-someone-wrote-about-in-step-4
+
+Known Bugs
+==========
+
+* .gitignore patterns ending in "/" should match directories, but not files, per "man gitignore".  
+  We fail to match them at all!  Workaround: be sure that none of your directory patterns will
+  accidentally match a file, and then just remove the trailing slashes.
+  
+* ometastore gets confused trying to do chown and utime on symlinks.  It spits a harmless error
+  out, but this should be cleaned up.
+
 
 License
 =======
