@@ -124,7 +124,7 @@ function init() {
 #!/bin/sh
 
 if [[ "\$SKIP_OMETASTORE" == "" ]]; then
-    ometastore -x -s -i --sort
+    ometastore -s -x -i -m --sort
     git add -f .ometastore
 fi
 EOF
@@ -136,7 +136,7 @@ EOF
 #!/bin/sh
 
 if [[ "\$SKIP_OMETASTORE" == "" ]]; then
-    ometastore -v -x -a -i
+    ometastore -a -x -i -m
 fi
 EOF
 
