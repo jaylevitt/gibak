@@ -1,3 +1,9 @@
+2008-11-30 09:00	Jay Levitt		<jay@jay.fm>
+        * Put our hooks in .git-hooks so they can be cloned
+
+2008-11-29 19:00	Jay Levitt		<jay@jay.fm>
+        * Log and continue after errors setting utime
+        
 2008-11-29 19:00	Jay Levitt		<jay@jay.fm>
 	* Noted a bug in handling .gitignore entries ending in slashes
 	

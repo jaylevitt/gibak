@@ -114,7 +114,13 @@ function init() {
     XDG_VIDEOS_DIR=$( echo ${XDG_VIDEOS_DIR#${HOME}} | sed 's:^/*::' )
     XDG_MUSIC_DIR=$( echo ${XDG_MUSIC_DIR#${HOME}} | sed 's:^/*::' )
 
-    cat << EOF > .git/hooks/pre-commit
+    mkdir .git-hooks || die "Couldn't create .git-hooks directory."
+
+    # Set up pre-commit hook.  We link to .git-hooks, rather than writing 
+    # the hook directly to .git/hooks, so that the hook files will be 
+    # versioned by git, and cloned easily to other machines.
+    cat << EOF > .git-hooks/pre-commit
+        
 #!/bin/sh
 
 if [[ "\$SKIP_OMETASTORE" == "" ]]; then
@@ -123,7 +129,10 @@ if [[ "\$SKIP_OMETASTORE" == "" ]]; then
 fi
 EOF
 
-    cat << EOF > .git/hooks/post-checkout
+    ln -s .git-hooks/pre-commit .git/hooks
+
+    # Set up post-checkout hook
+    cat << EOF > .git-hooks/post-checkout
 #!/bin/sh
 
 if [[ "\$SKIP_OMETASTORE" == "" ]]; then
@@ -131,6 +140,9 @@ if [[ "\$SKIP_OMETASTORE" == "" ]]; then
 fi
 EOF
 
+    ln -s .git-hooks/post-checkout .git/hooks
+    
+    # Create sample .gitignore if one isn't present
     test -e .gitignore || cat << EOF > .gitignore
 #
 # Here are some examples of what you might want to ignore
@@ -190,9 +202,10 @@ EOF
 EOF
 
     git add -f .gitignore
-    git commit -q -a -m"Initialized by $SCRIPT_NAME"
-    chmod u+x .git/hooks/pre-commit
-    chmod u+x .git/hooks/post-checkout
+    git add -f .git-hooks
+    chmod u+x .git-hooks/pre-commit
+    chmod u+x .git-hooks/post-checkout
+    git commit -q -a -m "Initialized by $SCRIPT_NAME"
     echo
     echo "You might be interested in tweaking the ~/.gitignore file"
     echo
